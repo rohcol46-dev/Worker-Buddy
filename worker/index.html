@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#13213D">
+  <meta name="description" content="Worker Buddy for workers: go online, get job requests nearby, earn fair pay.">
+  <title>Worker Buddy · Worker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/live.css">
+</head>
+<body data-app="worker" class="live">
+  <header class="topbar">
+    <a class="brand" href="../">👷 Worker Buddy <span class="app-tag" data-t="appWorker"></span></a>
+    <div class="top-actions">
+      <button id="installBtn" class="lang-btn" hidden data-t="installApp"></button>
+      <select id="langSelect" class="lang-select" aria-label="Language"></select>
+    </div>
+  </header>
+  <div id="offlineBanner" class="offline-banner" hidden></div>
+
+  <!-- ================= SIGN UP (first time only) ================= -->
+  <section id="onboard" class="screen">
+    <main>
+      <div class="hero"><h1 data-t="onboardWorkerTitle"></h1><p data-t="onboardHint"></p></div>
+      <form id="onboardForm" class="card form" autocomplete="on">
+        <label><span data-t="yourName"></span><input name="name" required maxlength="60" data-t-ph="workerNamePh" autocomplete="name"></label>
+        <label><span data-t="phone"></span><input name="phone" type="tel" inputmode="numeric" pattern="[6-9][0-9]{9}" maxlength="10" required placeholder="9876543210" autocomplete="tel-national"></label>
+        <label><span data-t="birthYear"></span><input name="birth" type="number" inputmode="numeric" min="1940" max="2100" required placeholder="1995"></label>
+        <label><span data-t="mainSkill"></span><select name="skill" id="skillSelect"></select></label>
+        <label><span data-t="experience"></span><input name="exp" type="number" inputmode="numeric" min="0" max="60" value="0"></label>
+        <label><span data-t="itiCert"></span><input name="iti" maxlength="30" autocomplete="off"></label>
+        <fieldset><legend data-t="myTools"></legend><div id="toolsChecks" class="chips wrap"></div></fieldset>
+        <label><span data-t="homeState"></span><input name="state" maxlength="40" autocomplete="off"></label>
+        <label><span data-t="cityLabel"></span><input name="city" maxlength="40" autocomplete="off"></label>
+        <label class="check"><input type="checkbox" name="mestri"> <span data-t="isMestri"></span></label>
+        <button class="btn btn-primary btn-block btn-big" type="submit" data-t="continueBtn"></button>
+      </form>
+      <div id="sharedPhone" class="card"></div>
+    </main>
+  </section>
+
+  <!-- ================= HOME: map + duty switch + active job ================= -->
+  <section id="home" class="screen">
+    <div id="heroMap" class="hero-map"></div>
+    <div class="sheet">
+      <div class="sheet-grip"></div>
+      <div class="heat-banner"></div>
+      <div class="me-row">
+        <div>
+          <b id="helloName"></b>
+          <div class="muted small" id="meLine"></div>
+        </div>
+        <button class="link-btn small" onclick="editProfile()">✏️</button>
+      </div>
+
+      <div id="dutyBlock">
+        <button id="dutyBtn" class="duty-btn" onclick="toggleDuty()"></button>
+        <p id="dutyText" class="duty-text"></p>
+        <div class="stats">
+          <div><small data-t="todayEarnings"></small><b id="todayEarnings">₹0</b></div>
+          <div><small data-t="jobsDone"></small><b id="jobsDone">0</b></div>
+        </div>
+        <p class="zero-fee" data-t="zeroCommission"></p>
+        <button class="link-btn small rate-link" onclick="openRateCard()" data-t="rateCard"></button>
+      </div>
+
+      <div id="activeJob"></div>
+      <div id="laterJobs"></div>
+      <div id="freeDays" class="card"></div>
+    </div>
+  </section>
+
+  <!-- ================= EARNINGS: wage record + pay slips ================= -->
+  <section id="earnings" class="screen">
+    <main>
+      <h2 data-t="earningsTitle"></h2>
+      <div id="earningsSummary" class="card"></div>
+      <h3 data-t="historyTitle"></h3>
+      <div id="historyList"></div>
+      <a class="btn btn-light btn-block" href="../wages/" data-t="wageMapLink"></a>
+    </main>
+  </section>
+
+  <!-- ================= SAFETY ================= -->
+  <section id="safety" class="screen">
+    <main>
+      <div class="heat-banner"></div>
+      <div class="card sos-card">
+        <button class="sos-btn" onclick="sendSOS()">🆘 <span data-t="sosBtn"></span></button>
+        <p class="small" data-t="sosHint"></p>
+        <button class="btn btn-light btn-block" onclick="reportHeat()" data-t="reportHeat"></button>
+        <div class="heat-help"></div>
+        <label class="small"><span data-t="sosContact"></span>
+          <input id="sosContact" type="tel" inputmode="numeric" maxlength="10" placeholder="9876543210" onchange="saveContact()">
+        </label>
+        <div class="row">
+          <a class="btn btn-light" href="tel:112">📞 112 <span data-t="police"></span></a>
+          <a class="btn btn-light" href="tel:108">🚑 108 <span data-t="ambulance"></span></a>
+        </div>
+      </div>
+      <div id="rightsHelper" class="card"></div>
+      <h2 data-t="mapTitle"></h2>
+      <label class="check small"><input type="checkbox" id="simulateHot" onchange="toggleSimulateHot()"> <span data-t="simulateHot"></span></label>
+      <div id="map" class="map"></div>
+      <button class="btn btn-light btn-block" onclick="useMyLocation()" data-t="useLocation"></button>
+      <p id="placesNote" class="muted small"></p>
+      <div id="restList"></div>
+      <div id="servicesCard" class="card"></div>
+    </main>
+  </section>
+
+  <!-- ================= SCHEMES ================= -->
+  <section id="schemes" class="screen">
+    <main>
+      <h2 data-t="schemesTitle"></h2>
+      <p class="muted" data-t="schemesHint"></p>
+      <form id="schemeForm" class="card form">
+        <label><span data-t="qAge"></span><input name="age" type="number" min="14" max="90" required></label>
+        <fieldset><legend data-t="qUnorganised"></legend>
+          <label class="radio"><input type="radio" name="unorganised" value="yes" required> <span data-t="yes"></span></label>
+          <label class="radio"><input type="radio" name="unorganised" value="no"> <span data-t="no"></span></label>
+        </fieldset>
+        <fieldset><legend data-t="qIncome"></legend>
+          <label class="radio"><input type="radio" name="lowIncome" value="yes" required> <span data-t="yes"></span></label>
+          <label class="radio"><input type="radio" name="lowIncome" value="no"> <span data-t="no"></span></label>
+        </fieldset>
+        <fieldset><legend data-t="qBank"></legend>
+          <label class="radio"><input type="radio" name="bank" value="yes" required> <span data-t="yes"></span></label>
+          <label class="radio"><input type="radio" name="bank" value="no"> <span data-t="no"></span></label>
+        </fieldset>
+        <button class="btn btn-primary btn-block" type="submit" data-t="findSchemes"></button>
+      </form>
+      <div id="schemeResults"></div>
+      <div id="coverCard" class="card"></div>
+      <div id="lessons"></div>
+    </main>
+  </section>
+
+  <!-- ================= CREW (mestri / contractor) ================= -->
+  <section id="crew" class="screen">
+    <main><div id="crewBook"></div></main>
+  </section>
+
+  <nav class="bottom-nav">
+    <button data-go="home"><span>🏠</span><small data-t="navHome"></small></button>
+    <button data-go="earnings"><span>💰</span><small data-t="navEarnings"></small></button>
+    <button data-go="safety"><span>🛟</span><small data-t="navSafety"></small></button>
+    <button data-go="schemes"><span>🏛️</span><small data-t="navSchemes"></small></button>
+    <button data-go="crew" id="crewNav" hidden><span>👥</span><small data-t="crewNav"></small></button>
+  </nav>
+
+  <!-- Incoming job request (like a ride request) -->
+  <div id="requestModal" class="modal request-modal" role="dialog" aria-modal="true" aria-labelledby="requestTitle">
+    <div class="modal-box" id="requestBox"></div>
+  </div>
+
+  <div id="rateModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <h3 id="rateTitle"></h3>
+      <div id="stars" class="stars"></div>
+      <div id="rateTags"></div>
+      <div class="row">
+        <button class="btn btn-light" onclick="closeModal('rateModal')" data-t="cancel"></button>
+        <button class="btn btn-primary" onclick="submitStars()" data-t="submit"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pay slip / wage statement (printable) -->
+  <div id="slipModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-box slip-box">
+      <div id="slipBody"></div>
+      <div class="row no-print">
+        <button class="btn btn-light" onclick="closeModal('slipModal')" data-t="close"></button>
+        <button class="btn btn-dark" onclick="printSlip()" data-t="savePdf"></button>
+      </div>
+      <button id="slipShare" class="btn btn-whatsapp btn-block no-print" onclick="shareSlip()" data-t="shareSlip"></button>
+      <a id="slipSms" class="btn btn-light btn-block no-print" href="#" data-t="smsSlip"></a>
+    </div>
+  </div>
+
+  <!-- Voice commands: "accept", "go online", the OTP, "done", "received" -->
+  <button id="micBtn" class="mic-btn" onclick="listenVoice()" aria-label="Speak">🎤</button>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/wage.js"></script>
+  <script src="../js/safety.js"></script>
+  <script src="../js/live.js"></script>
+  <script src="../js/features.js"></script>
+  <script src="../js/lang-hi.js"></script>
+  <script src="../js/extras.js"></script>
+  <script src="../js/more.js"></script>
+  <script src="../js/deck.js"></script>
+  <script src="../js/fair.js"></script>
+  <script src="../js/care.js"></script>
+  <script src="../js/grow.js"></script>
+  <script src="../js/worker-app.js"></script>
+</body>
+</html>

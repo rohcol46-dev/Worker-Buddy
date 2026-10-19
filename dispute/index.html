@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#13213D">
+  <meta name="description" content="Worker Buddy evidence for one job: agreement, OTP check-in, times, messages and payment.">
+  <title>Job Evidence · Worker Buddy</title>
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/live.css">
+</head>
+<body data-app="dispute" class="live">
+  <header class="topbar">
+    <a class="brand" href="../">⚖️ Worker Buddy <span class="app-tag" data-t="evidenceTitle"></span></a>
+    <div class="top-actions"><select id="langSelect" class="lang-select" aria-label="Language"></select></div>
+  </header>
+  <main class="page">
+    <div id="evidence" class="card"><p class="muted" data-t="loading"></p></div>
+    <div class="row no-print">
+      <button class="btn btn-dark" onclick="window.print()" data-t="savePdf"></button>
+      <button class="btn btn-whatsapp" onclick="shareEvidence()" data-t="shareSlip"></button>
+    </div>
+  </main>
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/wage.js"></script>
+  <script src="../js/safety.js"></script>
+  <script src="../js/live.js"></script>
+  <script src="../js/features.js"></script>
+  <script src="../js/lang-hi.js"></script>
+  <script src="../js/extras.js"></script>
+  <script src="../js/more.js"></script>
+  <script src="../js/deck.js"></script>
+  <script src="../js/fair.js"></script>
+  <script src="../js/care.js"></script>
+  <script src="../js/grow.js"></script>
+  <script src="../js/pages.js"></script>
+  <script>initEvidence();</script>
+</body>
+</html>

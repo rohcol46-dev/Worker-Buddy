@@ -1,0 +1,279 @@
+/* style.css — Worker Buddy. Mobile-first: big buttons, high contrast, light on low-end phones. */
+:root {
+  --navy: #13213D;
+  --orange: #E4561B;
+  --orange-soft: #FDEBE2;
+  --green: #1E8E4F;
+  --amber: #C98A00;
+  --red: #C62828;
+  --whatsapp: #1FA855;
+  --bg: #F4F5F7;
+  --card: #FFFFFF;
+  --text: #1B2333;
+  --muted: #5F6878;
+  --line: #E1E4EA;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Tamil", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+button, input, select { font: inherit; }
+
+/* ---------- Top bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 1000;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px;
+  background: var(--navy); color: #fff;
+}
+.brand { background: none; border: 0; color: #fff; font-weight: 800; font-size: 1.15rem; cursor: pointer; padding: 0; }
+.brand-icon { margin-right: 4px; }
+.lang-btn {
+  background: var(--orange); color: #fff; border: 0; border-radius: 999px;
+  padding: 6px 14px; font-weight: 700; cursor: pointer;
+}
+
+main { max-width: 560px; margin: 0 auto; padding: 16px 16px 96px; }
+
+/* ---------- Screens ---------- */
+.screen { display: none; }
+.screen.active { display: block; }
+
+h1 { margin: 0 0 6px; font-size: 2rem; color: var(--orange); }
+h2 { margin: 20px 0 10px; font-size: 1.3rem; }
+h3 { margin: 22px 0 8px; font-size: 1.05rem; }
+
+.muted { color: var(--muted); }
+.small { font-size: .88rem; }
+.center { text-align: center; }
+
+.card {
+  background: var(--card); border-radius: var(--radius);
+  padding: 14px; margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(19, 33, 61, .08);
+}
+
+/* ---------- Home ---------- */
+.hero {
+  background: var(--navy); color: #fff; border-radius: var(--radius);
+  padding: 22px 18px; margin-bottom: 14px;
+}
+.hero p { margin: 0; opacity: .9; }
+
+.big-buttons { display: grid; gap: 12px; margin-bottom: 14px; }
+.big-btn {
+  display: flex; align-items: center; gap: 14px;
+  border: 0; border-radius: var(--radius); padding: 20px;
+  font-size: 1.2rem; font-weight: 800; text-align: left; cursor: pointer; color: #fff;
+}
+.big-worker { background: var(--orange); }
+.big-employer { background: var(--navy); }
+.big-icon { font-size: 2rem; }
+
+.feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.feature { background: var(--card); border-radius: 10px; padding: 10px; font-weight: 600; font-size: .92rem; }
+
+.link-btn { background: none; border: 0; color: var(--orange); text-decoration: underline; cursor: pointer; padding: 0; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; justify-content: center; align-items: center; gap: 6px;
+  border: 0; border-radius: 10px; padding: 11px 14px; min-height: 44px;
+  font-weight: 700; cursor: pointer; text-decoration: none; color: var(--text);
+}
+.btn-primary { background: var(--orange); color: #fff; }
+.btn-light { background: #EEF0F4; }
+.btn-whatsapp { background: var(--whatsapp); color: #fff; }
+.btn-dark { background: var(--navy); color: #fff; }
+.btn-block { width: 100%; margin-top: 8px; }
+.btn-small { min-height: 36px; padding: 7px 10px; font-size: .88rem; }
+
+.row { display: flex; gap: 10px; }
+.row > * { flex: 1; }
+
+/* ---------- Heat banner ---------- */
+.heat-banner { border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-weight: 600; }
+.heat-banner:empty { display: none; }
+.heat-hot { background: #FDE2DD; color: #8E1D0B; }
+.heat-ok { background: #E3F2E8; color: #1B5E34; }
+.heat-off { background: #ECEEF2; color: var(--muted); }
+
+/* ---------- Availability switch ---------- */
+.available-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.available-card p { margin: 2px 0 0; }
+.switch {
+  flex: none; width: 64px; height: 36px; border-radius: 999px; border: 0;
+  background: #C9CED8; position: relative; cursor: pointer;
+}
+.switch span {
+  position: absolute; top: 4px; left: 4px; width: 28px; height: 28px;
+  border-radius: 50%; background: #fff; transition: left .15s;
+}
+.switch[aria-pressed="true"] { background: var(--green); }
+.switch[aria-pressed="true"] span { left: 32px; }
+
+/* ---------- Filter chips ---------- */
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; }
+.chip {
+  flex: none; border: 1px solid var(--line); background: #fff; border-radius: 999px;
+  padding: 7px 12px; cursor: pointer; font-weight: 600;
+}
+.chip.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+/* ---------- Job cards ---------- */
+.job-card { background: var(--card); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(19, 33, 61, .08); }
+.job-head { display: flex; gap: 12px; align-items: flex-start; }
+.job-icon { font-size: 2rem; line-height: 1; }
+.job-head h3 { margin: 0 0 2px; font-size: 1.1rem; }
+.job-head p { margin: 0; }
+.job-head .badge { margin-left: auto; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.tag { background: #EEF0F4; border-radius: 6px; padding: 3px 8px; font-size: .85rem; }
+.wage-line { font-size: 1.05rem; margin-bottom: 6px; }
+.wage-line b { color: var(--orange); font-size: 1.2rem; }
+.employer-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: .9rem; margin-bottom: 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actions .btn { flex: 1 1 140px; }
+
+.badge { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.badge-open { background: #E3F2E8; color: #1B5E34; }
+.badge-accepted { background: #FFF3D6; color: #7A5300; }
+.badge-done { background: #E6E9F0; color: #3D4659; }
+
+.score { border-radius: 6px; padding: 2px 8px; font-weight: 800; font-size: .82rem; color: #fff; }
+.score-good { background: var(--green); }
+.score-ok { background: var(--amber); }
+.score-bad { background: var(--red); }
+
+.stars-small { color: #F2A900; letter-spacing: 1px; }
+
+/* ---------- Forms ---------- */
+.form label { display: block; margin-bottom: 10px; font-weight: 600; font-size: .92rem; }
+.form input, .form select {
+  display: block; width: 100%; margin-top: 4px; padding: 11px;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff; font-weight: 400; font-size: 1rem;
+}
+.form .check, .check { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.check input { width: 20px; height: 20px; margin: 0; }
+fieldset { border: 0; padding: 0; margin: 0 0 12px; }
+legend { font-weight: 600; font-size: .92rem; margin-bottom: 6px; }
+.radio { display: inline-flex !important; align-items: center; gap: 6px; margin-right: 18px; }
+.radio input { width: 20px !important; height: 20px; margin: 0 !important; }
+
+.gear { background: #EEF0F4; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; font-size: .9rem; }
+.gear:empty { display: none; }
+.gear b { display: block; margin-bottom: 4px; }
+
+.estimate { background: var(--orange-soft); border-radius: 10px; padding: 12px; }
+.estimate-label { font-size: .85rem; font-weight: 700; color: var(--orange); text-transform: uppercase; letter-spacing: .04em; }
+.wage-total { font-size: 1.6rem; font-weight: 800; color: var(--navy); margin: 2px 0 6px; }
+.wage-parts { list-style: none; margin: 0; padding: 0; font-size: .9rem; }
+.wage-parts li { display: flex; justify-content: space-between; padding: 3px 0; border-top: 1px dashed #F2C7B3; }
+
+.mini-card { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--card); border-radius: 12px; padding: 12px; margin-bottom: 8px; }
+.mini-card .actions { flex: none; flex-direction: column; }
+.mini-card .actions .btn { flex: none; }
+
+/* ---------- Safety ---------- */
+.sos-card { border: 2px solid #F5C2BC; }
+.sos-btn {
+  width: 100%; border: 0; border-radius: var(--radius); padding: 18px;
+  background: var(--red); color: #fff; font-size: 1.35rem; font-weight: 800; cursor: pointer;
+}
+.sos-card input { display: block; width: 100%; margin: 4px 0 10px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 1rem; }
+.map { height: 280px; border-radius: var(--radius); margin: 8px 0; background: #DDE3EA; z-index: 0; }
+.map-note { padding: 20px; text-align: center; color: var(--muted); }
+.rest-item { display: flex; justify-content: space-between; align-items: center; background: var(--card); border-radius: 10px; padding: 10px 12px; margin-top: 8px; }
+.rest-item span:first-child { font-weight: 600; }
+.map-pin {
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--orange); border-radius: 50%;
+  font-size: 17px; line-height: 1; box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
+}
+
+/* ---------- Schemes ---------- */
+.scheme { background: var(--card); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; }
+.scheme h3 { margin: 0 0 4px; }
+.scheme p { margin: 0 0 8px; }
+.scheme a { color: var(--orange); font-weight: 700; }
+
+/* ---------- Bottom nav ---------- */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+  display: flex; justify-content: space-around;
+  background: #fff; border-top: 1px solid var(--line);
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+}
+.bottom-nav button {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: none; border: 0; padding: 4px 2px; cursor: pointer; color: var(--muted);
+}
+.bottom-nav span { font-size: 1.35rem; }
+.bottom-nav small { font-size: .7rem; font-weight: 700; }
+.bottom-nav button.active { color: var(--orange); }
+
+/* ---------- Popups ---------- */
+.modal { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(10, 16, 30, .55); align-items: center; justify-content: center; padding: 16px; }
+.modal.open { display: flex; }
+.modal-box { background: #fff; border-radius: var(--radius); padding: 18px; width: 100%; max-width: 420px; }
+.modal-box h3 { margin-top: 0; }
+.stars { display: flex; justify-content: center; gap: 6px; margin: 12px 0 18px; }
+.star { font-size: 2.4rem; background: none; border: 0; color: #CFD4DC; cursor: pointer; padding: 0 2px; }
+.star.on { color: #F2A900; }
+.agreement { background: #F8F9FB; border: 1px dashed #B9C0CC; border-radius: 10px; padding: 12px; margin-bottom: 14px; font-size: .95rem; }
+.agreement div { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; }
+.agreement div span:first-child { color: var(--muted); }
+.agreement .code { font-family: monospace; font-weight: 800; color: var(--navy); }
+
+.toast {
+  position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
+  background: var(--navy); color: #fff; padding: 10px 16px; border-radius: 10px;
+  opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 3000; max-width: 90%;
+}
+.toast.show { opacity: 1; }
+
+/* ---------- Two apps: landing page, app headers, worker profile ---------- */
+a.brand { color: #fff; text-decoration: none; }
+.app-tag {
+  display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px;
+  background: rgba(255, 255, 255, .18); font-size: .72rem; font-weight: 700; vertical-align: middle;
+}
+.topbar-worker { background: var(--orange); }
+.topbar-worker .lang-btn { background: var(--navy); }
+
+.profile-card p { margin: 0 0 8px; }
+.input {
+  display: block; width: 100%; padding: 10px; margin-bottom: 8px;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff; font-size: 1rem;
+}
+.profile-card .row .input { min-width: 0; }
+.available-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 6px; border-top: 1px solid var(--line); }
+.available-row p { margin: 2px 0 0; }
+
+.landing { padding-bottom: 32px; }
+.app-card {
+  display: flex; align-items: center; gap: 14px; padding: 18px; margin-bottom: 12px;
+  border-radius: var(--radius); color: #fff; text-decoration: none;
+}
+.app-card b { display: block; font-size: 1.2rem; }
+.app-card small { display: block; opacity: .9; margin-top: 2px; }
+.app-card-worker { background: var(--orange); }
+.app-card-employer { background: var(--navy); }
+.app-card-icon { font-size: 2.2rem; }
+.app-card-go { margin-left: auto; background: rgba(255, 255, 255, .2); border-radius: 999px; padding: 6px 12px; font-weight: 700; white-space: nowrap; }
+.tip { background: #FFF6D8; border-radius: 10px; padding: 10px 12px; font-size: .9rem; }
+.mini-card > .btn { flex: none; white-space: nowrap; }
+
+/* Landing: the 6-step flow from the pitch deck */
+.flow { counter-reset: step; list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 8px; }
+.flow li { counter-increment: step; display: flex; gap: 10px; align-items: center; background: var(--card); border-radius: 12px; padding: 10px 12px; }
+.flow li::before { content: counter(step, decimal-leading-zero); font-weight: 800; color: var(--orange); }

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#13213D">
+  <meta name="description" content="Worker Buddy: fair pay, safe work and direct jobs for daily-wage workers.">
+  <title>Worker Buddy</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-app="landing">
+  <header class="topbar">
+    <span class="brand">🤝 Worker Buddy</span>
+    <select id="langSelect" class="lang-select" aria-label="Language"></select>
+  </header>
+
+  <main class="landing">
+    <div class="hero">
+      <h1>Worker Buddy</h1>
+      <p data-t="tagline"></p>
+    </div>
+
+    <h2 data-t="chooseApp"></h2>
+
+    <a class="app-card app-card-worker" href="worker/">
+      <span class="app-card-icon">👷</span>
+      <span>
+        <b data-t="appWorker"></b>
+        <small data-t="workerAppDesc"></small>
+      </span>
+      <span class="app-card-go" data-t="openApp"></span>
+    </a>
+
+    <a class="app-card app-card-employer" href="employer/">
+      <span class="app-card-icon">🏠</span>
+      <span>
+        <b data-t="appEmployer"></b>
+        <small data-t="employerAppDesc"></small>
+      </span>
+      <span class="app-card-go" data-t="openApp"></span>
+    </a>
+
+    <h2 data-t="howItWorks"></h2>
+    <ol class="flow">
+      <li data-t="flow1"></li>
+      <li data-t="flow2"></li>
+      <li data-t="flow3"></li>
+      <li data-t="flow4"></li>
+      <li data-t="flow5"></li>
+      <li data-t="flow6"></li>
+    </ol>
+    <a class="btn btn-light btn-block" href="wages/" data-t="wageMapLink"></a>
+
+    <p class="tip">💡 <span data-t="demoSideBySide"></span></p>
+    <p class="muted small center">Team Tyrex · DEX26189 · Sathyabama Dexathon 2026</p>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script src="js/lang-hi.js"></script>
+  <script>
+    // The landing page only needs the language picker
+    const LANGS = { en: 'English', ta: 'தமிழ்', hi: 'हिंदी' };
+    function render() {
+      document.documentElement.lang = App.lang;
+      document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = t(el.dataset.t); });
+    }
+    const sel = document.getElementById('langSelect');
+    sel.innerHTML = Object.entries(LANGS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+    sel.value = App.lang;
+    sel.addEventListener('change', () => { App.lang = sel.value; Store.set('lang', App.lang); render(); });
+    render();
+  </script>
+</body>
+</html>

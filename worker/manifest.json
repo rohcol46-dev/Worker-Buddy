@@ -1,0 +1,11 @@
+{
+  "name": "Worker Buddy · Worker",
+  "short_name": "WB Worker",
+  "description": "Find jobs near you, see fair pay and stay safe.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F5F7",
+  "theme_color": "#E4561B",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

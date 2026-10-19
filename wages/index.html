@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#13213D">
+  <meta name="description" content="Worker Buddy wage map: what daily-wage workers are actually paid, by area and kind of work.">
+  <title>Wage Map · Worker Buddy</title>
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/live.css">
+</head>
+<body data-app="wages" class="live">
+  <header class="topbar">
+    <a class="brand" href="../">🗺️ Worker Buddy <span class="app-tag" data-t="wageMapTitle"></span></a>
+    <div class="top-actions"><select id="langSelect" class="lang-select" aria-label="Language"></select></div>
+  </header>
+  <main class="page">
+    <h1 data-t="wageMapTitle"></h1>
+    <p class="muted" data-t="wageMapHint"></p>
+    <div class="chips wrap" id="skillChips"></div>
+    <div id="wageMap" class="map wage-map"></div>
+    <div class="legend">
+      <span><i class="dot dot-low"></i><span data-t="belowFair"></span></span>
+      <span><i class="dot dot-fair"></i><span data-t="withinFair"></span></span>
+      <span><i class="dot dot-high"></i><span data-t="aboveFair"></span></span>
+    </div>
+    <p id="wageNote" class="muted small"></p>
+    <div id="wageList"></div>
+  </main>
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/wage.js"></script>
+  <script src="../js/safety.js"></script>
+  <script src="../js/live.js"></script>
+  <script src="../js/features.js"></script>
+  <script src="../js/lang-hi.js"></script>
+  <script src="../js/extras.js"></script>
+  <script src="../js/more.js"></script>
+  <script src="../js/deck.js"></script>
+  <script src="../js/fair.js"></script>
+  <script src="../js/care.js"></script>
+  <script src="../js/grow.js"></script>
+  <script src="../js/pages.js"></script>
+  <script>initWageMap();</script>
+</body>
+</html>

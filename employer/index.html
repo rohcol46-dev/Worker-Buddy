@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#E4561B">
+  <meta name="description" content="Worker Buddy for employers: book a nearby worker at a fair wage in seconds.">
+  <title>Worker Buddy · Employer</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/live.css">
+</head>
+<body data-app="employer" class="live">
+  <header class="topbar topbar-employer">
+    <a class="brand" href="../">🏠 Worker Buddy <span class="app-tag" data-t="appEmployer"></span></a>
+    <div class="top-actions">
+      <button id="installBtn" class="lang-btn" hidden data-t="installApp"></button>
+      <select id="langSelect" class="lang-select" aria-label="Language"></select>
+    </div>
+  </header>
+  <div id="offlineBanner" class="offline-banner" hidden></div>
+
+  <!-- ================= SIGN UP (first time only) ================= -->
+  <section id="onboard" class="screen">
+    <main>
+      <div class="hero"><h1 data-t="onboardEmployerTitle"></h1><p data-t="onboardHint"></p></div>
+      <form id="onboardForm" class="card form" autocomplete="on">
+        <label><span data-t="yourName"></span><input name="name" required maxlength="60" data-t-ph="yourNamePh" autocomplete="name"></label>
+        <label><span data-t="phone"></span><input name="phone" type="tel" inputmode="numeric" pattern="[6-9][0-9]{9}" maxlength="10" required placeholder="9876543210" autocomplete="tel-national"></label>
+        <button class="btn btn-primary btn-block btn-big" type="submit" data-t="continueBtn"></button>
+      </form>
+    </main>
+  </section>
+
+  <!-- ================= BOOK: map + booking sheet ================= -->
+  <section id="book" class="screen">
+    <div class="hero-map-wrap">
+      <div id="heroMap" class="hero-map"></div>
+      <div id="radar" class="radar" hidden><span></span><span></span><span></span></div>
+      <div class="map-badge" id="onlineBadge"></div>
+    </div>
+    <div class="sheet">
+      <div class="sheet-grip"></div>
+      <div class="heat-banner"></div>
+
+      <!-- 1. Booking form -->
+      <div id="bookForm">
+        <h2 data-t="bookTitle"></h2>
+        <div id="typeGrid" class="type-grid"></div>
+        <p id="onlineCount" class="muted small"></p>
+        <div id="pickWorker"></div>
+
+        <label class="field"><span data-t="whereWork"></span>
+          <div class="row">
+            <input id="areaInput" class="input" list="areaList" data-t-ph="areaPh" maxlength="80">
+            <button type="button" class="btn btn-light btn-small" onclick="useMyPlace()" data-t="myLocation"></button>
+          </div>
+          <datalist id="areaList"></datalist>
+        </label>
+
+        <div class="row field">
+          <div>
+            <span class="field-label" data-t="hours"></span>
+            <div class="stepper-input">
+              <button type="button" onclick="changeHours(-1)" aria-label="Fewer hours">−</button>
+              <b id="hoursValue">8</b>
+              <button type="button" onclick="changeHours(1)" aria-label="More hours">+</button>
+            </div>
+          </div>
+          <div>
+            <span class="field-label" data-t="load"></span>
+            <div class="segmented" id="loadSeg">
+              <button type="button" data-load="light" data-t="light"></button>
+              <button type="button" data-load="medium" data-t="medium"></button>
+              <button type="button" data-load="heavy" data-t="heavy"></button>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label" data-t="whenLabel"></span>
+          <div class="row">
+            <div class="segmented" id="whenSeg">
+              <button type="button" data-when="now" data-t="now"></button>
+              <button type="button" data-when="later" data-t="later"></button>
+            </div>
+            <input id="laterInput" class="input" type="datetime-local" hidden>
+          </div>
+          <label class="check" id="repeatRow" hidden><input type="checkbox" id="repeatInput"> <span data-t="repeatWeekly"></span></label>
+          <p id="freeOnDay" class="muted small"></p>
+        </div>
+        <div class="field">
+          <span class="field-label" data-t="teamSize"></span>
+          <div class="stepper-input">
+            <button type="button" onclick="changeTeam(-1)" aria-label="Fewer workers">−</button>
+            <b id="teamValue">1</b>
+            <button type="button" onclick="changeTeam(1)" aria-label="More workers">+</button>
+          </div>
+        </div>
+        <label class="check field"><input type="checkbox" id="riskyInput" onchange="E.risky = this.checked; renderEstimate()"> <span data-t="risky"></span></label>
+        <label class="check field"><input type="checkbox" id="toolsInput" onchange="E.tools = this.checked; renderEstimate()"> <span data-t="bringTools"></span></label>
+        <div class="field"><span class="field-label" data-t="perksTitle"></span><div class="chips wrap" id="perksBox"></div></div>
+        <label class="check field" id="favFirstRow" hidden><input type="checkbox" id="favFirstInput" checked> <span data-t="favFirst"></span></label>
+
+        <div id="gearBox" class="gear"></div>
+        <div class="estimate">
+          <div class="estimate-label" data-t="estimate"></div>
+          <div id="estimateBox"></div>
+          <button type="button" class="link-btn small" onclick="openRateCard()" data-t="rateCard"></button>
+          <p class="muted small" data-t="travelNote"></p>
+        </div>
+        <button id="bookBtn" class="btn btn-primary btn-block btn-big" onclick="bookWorker()"></button>
+      </div>
+
+      <!-- 2. Searching, assigned, in progress, paid -->
+      <div id="bookingLive"></div>
+    </div>
+  </section>
+
+  <!-- ================= MY BOOKINGS ================= -->
+  <section id="bookings" class="screen">
+    <main>
+      <div id="myScore" class="card score-card"></div>
+      <div id="restHost" class="card"></div>
+      <div id="gstCard" class="card"></div>
+      <div class="row">
+        <button class="btn btn-light" onclick="openMonthlyReport(E.records, E.me)" data-t="reportBtn"></button>
+        <a class="btn btn-light" href="../wages/" data-t="wageMapLink"></a>
+      </div>
+      <h2 data-t="bookingsTitle"></h2>
+      <div id="bookingList"></div>
+    </main>
+  </section>
+
+  <nav class="bottom-nav">
+    <button data-go="book"><span>➕</span><small data-t="navBook"></small></button>
+    <button data-go="bookings"><span>📋</span><small data-t="navBookings"></small></button>
+  </nav>
+
+  <div id="rateModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <h3 id="rateTitle"></h3>
+      <div id="stars" class="stars"></div>
+      <div id="rateTags"></div>
+      <div class="row">
+        <button class="btn btn-light" onclick="closeModal('rateModal')" data-t="cancel"></button>
+        <button class="btn btn-primary" onclick="submitStars()" data-t="submit"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Worker profile (like a professional's page on Urban Company) -->
+  <div id="profileModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div id="profileBody"></div>
+      <button id="profileFav" class="btn btn-light btn-block"></button>
+      <button id="profilePick" class="btn btn-primary btn-block btn-big"></button>
+      <button class="btn btn-light btn-block" onclick="closeModal('profileModal')" data-t="close"></button>
+    </div>
+  </div>
+
+  <!-- Pay slip (printable) -->
+  <div id="slipModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-box slip-box">
+      <div id="slipBody"></div>
+      <div class="row no-print">
+        <button class="btn btn-light" onclick="closeModal('slipModal')" data-t="close"></button>
+        <button class="btn btn-dark" onclick="printSlip()" data-t="savePdf"></button>
+      </div>
+      <button id="slipShare" class="btn btn-whatsapp btn-block no-print" onclick="shareSlip()" data-t="shareSlip"></button>
+      <a id="slipSms" class="btn btn-light btn-block no-print" href="#" data-t="smsSlip"></a>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/data.js"></script>
+  <script src="../js/wage.js"></script>
+  <script src="../js/safety.js"></script>
+  <script src="../js/live.js"></script>
+  <script src="../js/features.js"></script>
+  <script src="../js/lang-hi.js"></script>
+  <script src="../js/extras.js"></script>
+  <script src="../js/more.js"></script>
+  <script src="../js/deck.js"></script>
+  <script src="../js/fair.js"></script>
+  <script src="../js/care.js"></script>
+  <script src="../js/grow.js"></script>
+  <script src="../js/employer-app.js"></script>
+</body>
+</html>
