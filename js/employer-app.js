@@ -10,6 +10,8 @@ const E = {
   perks: [],           // meal / water / shade / toilet provided
   crew: [],            // a team booking: one booking per worker
   crewWorkers: {},
+  crewChat: null,      // team slot whose messages are open
+  crewPay: null,       // { id, tip } for the team slot being paid
   offers: [],          // counter-offers from workers (inDrive-style)
   preferred: null,     // a worker chosen by name (or "book again")
   tip: 0,
@@ -246,10 +248,8 @@ function placeFor(area) {
 }
 
 async function bookWorker() {
-  if (!navigator.onLine) return showToast(t('offlineBanner'));
-  const { data: owe } = await db.from('bookings').select('id').eq('employer_id', E.me.id)
-    .gt('showup_pay', 0).is('showup_paid_at', null).limit(1);
-  if (owe && owe.length) {
+  const online = navigator.onLine;
+  if (online && await owesShowup()) {
     showToast(t('showupBlock'));
     return show('bookings');
   }
@@ -263,7 +263,7 @@ async function bookWorker() {
     const at = Date.parse(document.getElementById('laterInput').value);
     if (!at || at - Date.now() < LATER_MIN_MINUTES * 60000 - 60000) return showToast(t('laterTooSoon'));
     scheduled = new Date(at).toISOString();
-  } else if (E.preferred && !E.preferred.online) {
+  } else if (online && E.preferred && !E.preferred.online) {
     return showToast(tf('preferredOffline', E.preferred.name));
   }
   if (isNightTime(scheduled ? new Date(scheduled) : new Date()) && !E.me.gstin) {
@@ -292,19 +292,15 @@ async function bookWorker() {
     perks: E.perks,
     priority_ids: !E.preferred && Fav.ids.length && document.getElementById('favFirstInput').checked ? Fav.ids : null
   };
-  // Repeat every week: save the template first so each booking points to it
+  // Repeat every week: the template is saved first so each booking points to it
+  let repeat = null;
   if (scheduled && document.getElementById('repeatInput').checked) {
     const at = new Date(scheduled);
     const template = { ...row, group_size: E.team };
     ['employer_id', 'otp', 'scheduled_for', 'preferred_worker_id', 'priority_ids'].forEach((k) => delete template[k]);
-    const { data: rep } = await db.from('repeat_jobs').insert({
-      employer_id: E.me.id, template, weekday: at.getDay(),
-      at_time: `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`
-    }).select().single();
-    if (rep) row.repeat_id = rep.id;
+    repeat = { employer_id: E.me.id, template, weekday: at.getDay(),
+      at_time: `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}` };
   }
-  const btn = document.getElementById('bookBtn');
-  btn.disabled = true;
   let rows = [row];
   if (E.team > 1) {
     // Team booking: one booking per worker, linked by group_id; each rings separately
@@ -313,9 +309,68 @@ async function bookWorker() {
       ...row, group_id: group, group_size: E.team, otp: String(Math.floor(1000 + Math.random() * 9000))
     }));
   }
-  const { data: made, error } = await db.from('bookings').insert(rows).select();
+  const post = { rows, repeat, savedAt: Date.now() };
+  if (!online) {
+    // No internet: keep the job on this phone and post it when the internet comes back
+    Store.set('post_queue', [...(Store.get('post_queue', []) || []), post]);
+    showToast(t('postSavedOffline'));
+    E.preferred = null;
+    pickWhen('now');
+    syncForm();
+    return show('bookings');
+  }
+  const btn = document.getElementById('bookBtn');
+  btn.disabled = true;
+  const made = await sendPost(post);
   btn.disabled = false;
-  if (error || !made || !made.length) return showToast(t('saveError'));
+  if (!made) return showToast(t('saveError'));
+  showPosted(made);
+}
+
+// Show-up pay still owed blocks new posts
+async function owesShowup() {
+  const { data: owe } = await db.from('bookings').select('id').eq('employer_id', E.me.id)
+    .gt('showup_pay', 0).is('showup_paid_at', null).limit(1);
+  return !!(owe && owe.length);
+}
+
+// Insert one post (its weekly template first, if any). Returns the new bookings or null.
+async function sendPost(post) {
+  const rows = post.rows.map((r) => ({ ...r }));
+  if (post.repeat) {
+    const { data: rep } = await db.from('repeat_jobs').insert(post.repeat).select().single();
+    if (rep) rows.forEach((r) => { r.repeat_id = rep.id; });
+  }
+  const { data: made, error } = await db.from('bookings').insert(rows).select();
+  return error || !made || !made.length ? null : made;
+}
+
+// Jobs saved while offline: post them once the internet is back
+async function flushPosts() {
+  const queue = Store.get('post_queue', []) || [];
+  if (!queue.length || !navigator.onLine || !E.me) return;
+  Store.set('post_queue', []);
+  if (await owesShowup()) {
+    showToast(t('showupBlock'));
+    return show('bookings');
+  }
+  let last = null;
+  for (const post of queue) {
+    const now = !post.rows[0].scheduled_for;
+    // A "now" job saved more than an hour ago is out of date: do not ring workers for it
+    if (now && Date.now() - post.savedAt > 60 * 60000) { showToast(t('postTooOld')); continue; }
+    if (!now && Date.parse(post.rows[0].scheduled_for) < Date.now()) { showToast(t('postTooOld')); continue; }
+    const made = await sendPost(post);
+    if (made) last = made;
+  }
+  if (!last) return;
+  showToast(t('postSentNow'));
+  if (!E.booking && !E.crew.length) showPosted(last);
+  else if (document.getElementById('bookings').classList.contains('active')) renderBookings();
+}
+
+// After posting: show the live booking (or the team view, or the later list)
+async function showPosted(made) {
   const data = made[0];
   E.preferred = null;
   E.offers = [];
@@ -432,6 +487,7 @@ function renderBooking() {
         <div class="chips">${TIPS.map((n) => `<button type="button" class="chip ${E.tip === n ? 'active' : ''}" onclick="setTip(${n})">${n ? '₹' + n : t('noTip')}</button>`).join('')}</div>
       </div>
       ${b.effort_status === 'pending' ? `<p class="dispute-note">${t('effortPayFirst')}</p>` : `
+      ${upiPayHTML(b, E.worker, amount + E.tip + approvedMaterials())}
       <button class="btn btn-accept btn-block btn-big" onclick="payWorker()">${tf('payNow', amount + E.tip + approvedMaterials())}</button>
       <button class="btn btn-dark btn-block" onclick="showPayQR(E.booking, amountOf(E.booking) + E.tip + approvedMaterials())">${t('qrPayBtn')}</button>`}`;
   } else if (b.status === 'paid' && b.worker_confirmed_at) {
@@ -565,14 +621,17 @@ function crewSlotHTML(b, i) {
     } else if (b.status === 'started') {
       action = `<span class="badge badge-accepted">${statusLabel('started')}</span>`;
     } else if (b.status === 'completed') {
-      action = `<button class="btn btn-accept btn-small" onclick="payCrew('${b.id}')">${tf('payOne', amountOf(b))}</button>`;
+      action = `<button class="btn btn-accept btn-small" onclick="openCrewPay('${b.id}')">${tf('payOne', amountOf(b))}</button>`;
     } else if (b.status === 'paid') {
       action = b.worker_confirmed_at ? `<span class="badge badge-open">✅ ${t('paySlip')}</span>`
         : b.disputed ? `<span class="badge badge-disputed">⚠️ ${t('statusDisputed')}</span>`
           : `<span class="badge badge-accepted">${t('awaitingConfirm')}</span>`;
     }
+    if (b.effort_status === 'pending') action += ` <span class="badge badge-accepted">😓 +₹${b.effort_extra}</span>`;
+    const chat = ['assigned', 'started', 'completed'].includes(b.status)
+      ? `<button class="icon-btn" onclick="openCrewChat('${b.id}')" aria-label="${attr(t('quickMessages'))}">💬</button>` : '';
     body = `<div class="crew-main"><b>${esc(w ? w.name : '…')}</b> <small>${w ? workerStars(w) : ''}</small><br>${action}</div>
-      ${w && w.phone ? `<a class="icon-btn" href="tel:${w.phone}" aria-label="${t('call')}">📞</a>` : ''}`;
+      ${chat}${w && w.phone ? `<a class="icon-btn" href="tel:${w.phone}" aria-label="${t('call')}">📞</a>` : ''}`;
   }
   return `<div class="crew-slot"><span class="crew-num">${i + 1}</span>${body}</div>`;
 }
@@ -625,9 +684,76 @@ async function stopCrewSearch(reason) {
   await refreshCrew();
 }
 
+// ---------- Team slots: quick messages, tip and UPI for each worker ----------
+function crewModal() {
+  let m = document.getElementById('crewModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'crewModal';
+    m.className = 'modal';
+    m.innerHTML = `<div class="modal-box slip-box"><div id="crewModalBody"></div>
+      <button class="btn btn-light btn-block" onclick="closeCrewModal()">${t('close')}</button></div>`;
+    m.addEventListener('click', (e) => { if (e.target === m) closeCrewModal(); });
+    document.body.appendChild(m);
+  }
+  return m;
+}
+function closeCrewModal() {
+  E.crewChat = null;
+  E.crewPay = null;
+  Msg.bookingId = null;
+  closeModal('crewModal');
+}
+
+async function openCrewChat(id) {
+  E.crewPay = null;
+  E.crewChat = id;
+  await loadMessages(id);
+  const m = crewModal();
+  drawCrewChat();
+  m.classList.add('open');
+}
+function drawCrewChat() {
+  const b = E.crew.find((x) => x.id === E.crewChat);
+  if (!b) return;
+  const w = E.crewWorkers[b.worker_id] || {};
+  document.getElementById('crewModalBody').innerHTML = `<h3>💬 ${esc(w.name || '')}</h3>${messagesHTML('employer', w.name)}`;
+}
+
+function openCrewPay(id) {
+  E.crewChat = null;
+  E.crewPay = { id, tip: 0 };
+  const m = crewModal();
+  drawCrewPay();
+  m.classList.add('open');
+}
+function drawCrewPay() {
+  const b = E.crewPay && E.crew.find((x) => x.id === E.crewPay.id);
+  if (!b) return;
+  const w = E.crewWorkers[b.worker_id] || {};
+  const tip = E.crewPay.tip;
+  const total = amountOf(b) + tip;
+  document.getElementById('crewModalBody').innerHTML = `
+    <h3>${esc(w.name || '')}</h3>
+    ${effortHTML('employer', b)}
+    <div class="agreement">
+      <div><span>${t('agreedWage')}</span><span>₹${amountOf(b)}</span></div>
+      ${tip ? `<div><span>${t('tipLabel')}</span><span>+₹${tip}</span></div>` : ''}
+      <div><span><b>${t('totalPaid')}</b></span><span><b>₹${total}</b></span></div>
+    </div>
+    <div class="tip-box"><b>🙏 ${t('addTip')}</b>
+      <div class="chips">${TIPS.map((n) => `<button type="button" class="chip ${tip === n ? 'active' : ''}" onclick="E.crewPay.tip = ${n}; drawCrewPay()">${n ? '₹' + n : t('noTip')}</button>`).join('')}</div>
+    </div>
+    ${b.effort_status === 'pending' ? `<p class="dispute-note">${t('effortPayFirst')}</p>` : `
+    ${upiPayHTML(b, w, total)}
+    <button class="btn btn-accept btn-block btn-big" onclick="payCrew('${b.id}')">${tf('payNow', total)}</button>`}`;
+}
+
 async function payCrew(id) {
-  const r = await callAction('pay_booking', { p_booking: id, p_employer: E.me.id, p_tip: 0 });
+  const tip = E.crewPay && E.crewPay.id === id ? E.crewPay.tip : 0;
+  const r = await callAction('pay_booking', { p_booking: id, p_employer: E.me.id, p_tip: tip });
   if (r.error || (!r.queued && !r.data)) return showToast(t('saveError'));
+  closeCrewModal();
   await loadMe();
   await refreshCrew();
   openStars(t('rateWorkerTitle'), async (stars, tags) => {
@@ -794,6 +920,9 @@ async function renderBookings() {
     E.records = Store.get('e_records', []);
   }
 
+  const waiting = (Store.get('post_queue', []) || []).length;
+  document.getElementById('pendingPosts').innerHTML = waiting
+    ? `<p class="offline-wait">⏳ ${tf('postsWaiting', waiting)}</p>` : '';
   const s = fairPayScore(E.me);
   document.getElementById('myScore').innerHTML = `
     <small>${t('yourFairPay')}</small>
@@ -988,7 +1117,15 @@ App.onShow = (id) => {
 };
 App.onHeat = () => { if (E.me) renderEstimate(); };
 App.onMove = () => {};
-App.onMessages = () => renderBooking();
+App.onMessages = () => (E.crewChat ? drawCrewChat() : renderBooking());
+// A message from a team member whose chat is not open: still tell the employer
+App.onOtherMessage = (m) => {
+  const b = E.crew.find((x) => x.id === m.booking_id);
+  if (!b || m.sender === 'employer') return;
+  const w = E.crewWorkers[b.worker_id] || {};
+  showToast(`💬 ${w.name || ''}: ${t('ph_' + m.phrase)}`);
+  ring();
+};
 App.onMaterials = () => renderBooking();
 App.onRepeat = () => renderBookings();
 App.onFavorites = (id) => {
@@ -1019,6 +1156,8 @@ async function startApp() {
   });
   renderBooking();
   flushQueue();
+  flushPosts();
+  window.addEventListener('online', flushPosts);
 
   db.channel('employer-live')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bookings', filter: `employer_id=eq.${E.me.id}` }, onBookingChange)
@@ -1045,7 +1184,8 @@ async function startApp() {
       showToast(`💬 ${t('ph_' + m.phrase)}`);
       ring();
     }
-    renderBooking();
+    if (E.crewChat) drawCrewChat();
+    else renderBooking();
   });
 }
 
@@ -1074,7 +1214,7 @@ async function init() {
       document.body.classList.add('onboarding');
       return show('onboard');
     }
-    show('bookings');
+    startApp(); // the booking form works offline; jobs are saved and posted later
     window.addEventListener('online', () => location.reload(), { once: true });
     return;
   }
@@ -1086,5 +1226,11 @@ async function init() {
   Store.set('e_me', E.me);
   startApp();
 }
+
+// Road distance arrived: redraw the arrival line and the offers list
+window.addEventListener('wb-eta', () => {
+  if (E.booking && E.worker && E.booking.status === 'assigned') updateTracking(false);
+  if (E.booking && E.booking.status === 'searching' && E.offers.length) renderBooking();
+});
 
 init();

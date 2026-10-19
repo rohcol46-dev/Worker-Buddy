@@ -119,8 +119,8 @@ function effortHTML(me, b) {
       ? `<div class="effort effort-pending"><b>😓 ${t('effortTitle')}</b>
           <p>${effortClaimText(b)}</p><p class="small">${tf('effortFair', b.effort_extra)}</p>
           <div class="row">
-            <button class="btn btn-accept" onclick="decideEffort(true)">${tf('effortAccept', b.effort_extra)}</button>
-            <button class="btn btn-light" onclick="decideEffort(false)">${t('effortRefuse')}</button>
+            <button class="btn btn-accept" onclick="decideEffort(true, '${b.id}')">${tf('effortAccept', b.effort_extra)}</button>
+            <button class="btn btn-light" onclick="decideEffort(false, '${b.id}')">${t('effortRefuse')}</button>
           </div></div>`
       : `<div class="effort effort-pending"><b>😓 ${t('effortTitle')}</b>
           <p>${effortClaimText(b)}</p><p class="wait-pay"><span class="pulse-dot"></span>${tf('effortWaiting', b.effort_extra)}</p></div>`;
@@ -152,10 +152,12 @@ async function claimEffort(event) {
   showToast(tf('effortWaiting', data));
 }
 
-async function decideEffort(ok) {
-  const { data, error } = await db.rpc('decide_effort', { p_booking: E.booking.id, p_employer: E.me.id, p_ok: ok });
+async function decideEffort(ok, id) {
+  const b = (E.booking && E.booking.id === id ? E.booking : E.crew.find((x) => x.id === id)) || E.booking;
+  const { data, error } = await db.rpc('decide_effort', { p_booking: b.id, p_employer: E.me.id, p_ok: ok });
   if (error || !data) return showToast(t('saveError'));
-  showToast(ok ? tf('effortAccepted', E.booking.effort_extra) : t('effortRefusedToast'));
+  showToast(ok ? tf('effortAccepted', b.effort_extra) : t('effortRefusedToast'));
+  if (E.crewPay && E.crewPay.id === b.id) { await refreshCrew(); drawCrewPay(); }
 }
 
 // ---------- 2. QR proof of pay ----------
@@ -456,3 +458,57 @@ Object.assign(T.hi, {
 Object.assign(T.en, { ruleNight: 'Night work (8 PM – 6 AM): +20%' });
 Object.assign(T.ta, { ruleNight: 'இரவு வேலை (இரவு 8 – காலை 6): +20%' });
 Object.assign(T.hi, { ruleNight: 'रात का काम (रात 8 – सुबह 6): +20%' });
+
+// ---------- Pay through the employer's own UPI app (free, no payment gateway) ----------
+// Opens GPay / PhonePe / Paytm with the worker's UPI ID and the amount filled in.
+// The employer still taps "Pay and finish" after, and the worker confirms as before.
+function upiLink(b, worker, amount) {
+  if (!worker || !worker.upi_id) return '';
+  const q = new URLSearchParams({ pa: worker.upi_id, pn: worker.name || 'Worker', am: String(amount), cu: 'INR',
+    tn: `Worker Buddy ${t(b.type)} ${b.id.slice(0, 8)}` });
+  return 'upi://pay?' + q.toString().replace(/\+/g, '%20').replace(/%40/g, '@'); // UPI apps expect a plain @
+}
+function upiPayHTML(b, worker, amount) {
+  const link = upiLink(b, worker, amount);
+  if (!link) return `<p class="muted small">${t('upiMissing')}</p>`;
+  return `<a class="btn btn-upi btn-block btn-big" href="${attr(link)}">${tf('upiPayBtn', amount)}</a>
+    <p class="muted small center">${tf('upiHint', esc(worker.upi_id))}</p>`;
+}
+Object.assign(T.en, {
+  upiIdLabel: 'UPI ID (to get paid in your bank)',
+  upiPayBtn: (n) => `📲 Pay ₹${n} with UPI app`,
+  upiHint: (id) => `Opens GPay, PhonePe or Paytm with ${id}. After paying, tap "Pay and finish".`,
+  upiMissing: 'This worker has not added a UPI ID. Pay in cash, then tap "Pay and finish".'
+});
+Object.assign(T.ta, {
+  upiIdLabel: 'UPI ID (வங்கியில் கூலி பெற)',
+  upiPayBtn: (n) => `📲 UPI ஆப் மூலம் ₹${n} செலுத்து`,
+  upiHint: (id) => `${id} உடன் GPay, PhonePe அல்லது Paytm திறக்கும். செலுத்திய பின் "செலுத்தி முடி" அழுத்தவும்.`,
+  upiMissing: 'இந்த வேலையாள் UPI ID சேர்க்கவில்லை. பணமாக கொடுத்து "செலுத்தி முடி" அழுத்தவும்.'
+});
+Object.assign(T.hi, {
+  upiIdLabel: 'UPI ID (बैंक में पैसा पाने के लिए)',
+  upiPayBtn: (n) => `📲 UPI ऐप से ₹${n} दें`,
+  upiHint: (id) => `${id} के साथ GPay, PhonePe या Paytm खुलेगा। भुगतान के बाद "दें और पूरा करें" दबाएँ।`,
+  upiMissing: 'इस मज़दूर ने UPI ID नहीं जोड़ी है। नकद दें, फिर "दें और पूरा करें" दबाएँ।'
+});
+
+// ---------- Posting a job with no internet ----------
+Object.assign(T.en, {
+  postSavedOffline: '📴 No internet. Job saved on this phone; it will be posted when the internet is back.',
+  postsWaiting: (n) => `${n} job${n > 1 ? 's' : ''} waiting for internet to be posted`,
+  postSentNow: '✅ Internet is back: your saved job is posted',
+  postTooOld: 'A job saved offline was too old to post. Please post it again.'
+});
+Object.assign(T.ta, {
+  postSavedOffline: '📴 இணையம் இல்லை. வேலை இந்த போனில் சேமிக்கப்பட்டது; இணையம் வந்ததும் பதிவாகும்.',
+  postsWaiting: (n) => `${n} வேலை இணையத்திற்காக காத்திருக்கிறது`,
+  postSentNow: '✅ இணையம் வந்தது: சேமித்த வேலை பதிவானது',
+  postTooOld: 'இணையம் இல்லாதபோது சேமித்த வேலை மிகவும் பழையது. மீண்டும் பதிவு செய்யவும்.'
+});
+Object.assign(T.hi, {
+  postSavedOffline: '📴 इंटरनेट नहीं है। काम इस फ़ोन में सेव हुआ; इंटरनेट आते ही पोस्ट होगा।',
+  postsWaiting: (n) => `${n} काम इंटरनेट का इंतज़ार कर रहे हैं`,
+  postSentNow: '✅ इंटरनेट आ गया: सेव किया काम पोस्ट हो गया',
+  postTooOld: 'बिना इंटरनेट सेव किया काम बहुत पुराना था। कृपया फिर से पोस्ट करें।'
+});

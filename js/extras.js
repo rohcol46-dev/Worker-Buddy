@@ -20,12 +20,41 @@ const SPEED_KMH = 15;          // mix of walking, bus and two-wheeler in the cit
 const LATER_MIN_MINUTES = 60;  // "later" bookings are at least an hour ahead
 
 // ---------- Arrival time and directions (Rapido) ----------
-function etaText(from, to) {
-  const km = kmBetween(from, to);
-  if (km === null) return '';
-  const min = Math.max(2, Math.round((km / SPEED_KMH) * 60 + 2));
-  return tf('etaLine', km.toFixed(1), min);
+// Arrival time: road distance from the free OSRM router (no key), at city speed.
+// Until the road answer arrives (or if it fails), the straight-line distance is used.
+const Road = { cache: {}, asking: {} };
+function roadKey(from, to) {
+  return [from.lat, from.lng, to.lat, to.lng].map((x) => Number(x).toFixed(3)).join(',');
 }
+function askRoad(from, to, key) {
+  if (Road.asking[key] || !navigator.onLine) return;
+  Road.asking[key] = true;
+  fetch(`https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`,
+    { signal: AbortSignal.timeout(8000) })
+    .then((r) => r.json())
+    .then((j) => {
+      const m = j.routes && j.routes[0] && j.routes[0].distance;
+      if (m) {
+        Road.cache[key] = { km: m / 1000, at: Date.now() };
+        window.dispatchEvent(new Event('wb-eta')); // apps redraw their arrival line
+      }
+    })
+    .catch(() => {})
+    .finally(() => setTimeout(() => { delete Road.asking[key]; }, 60000)); // ask again at most once a minute
+}
+function etaText(from, to) {
+  const line = kmBetween(from, to);
+  if (line === null) return '';
+  const key = roadKey(from, to);
+  const hit = Road.cache[key];
+  if (!hit || Date.now() - hit.at > 120000) askRoad(from, to, key);
+  const km = hit ? hit.km : line;
+  const min = Math.max(2, Math.round((km / SPEED_KMH) * 60 + 2));
+  return tf('etaLine', km.toFixed(1), min) + (hit ? ` · ${t('byRoad')}` : '');
+}
+Object.assign(T.en, { byRoad: 'by road' });
+Object.assign(T.ta, { byRoad: 'சாலை வழி' });
+Object.assign(T.hi, { byRoad: 'सड़क से' });
 
 function directionsUrl(b) {
   return `https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lng}`;

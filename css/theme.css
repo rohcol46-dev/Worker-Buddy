@@ -115,6 +115,7 @@ body[data-app="employer"] .app-tag { background: rgba(43, 194, 122, .18); color:
 .btn-accept { background: var(--grad-green); color: #fff; box-shadow: var(--shadow-green); }
 .btn-dark { background: var(--grad-ink); color: #fff; box-shadow: 0 8px 18px rgba(14, 26, 54, .22); }
 .btn-whatsapp { background: linear-gradient(135deg, #34D27A, #1A9A4C); color: #fff; box-shadow: 0 8px 18px rgba(31, 168, 85, .28); }
+.btn-upi { background: linear-gradient(135deg, #6C4CF1, #4B2BD6); color: #fff; box-shadow: 0 10px 22px rgba(91, 59, 228, .3); }
 .btn-light { background: #fff; color: var(--navy); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
 .btn-light:hover { border-color: #D9D2C6; background: #FFFCF8; }
 .btn-big { min-height: 56px; font-size: 1.08rem; border-radius: 16px; }
@@ -314,3 +315,4 @@ main { padding-bottom: 112px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+.offline-wait { background: #FFF6DE; border: 1px solid #F5E2AE; border-radius: 14px; padding: 10px 12px; font-weight: 700; margin: 0 0 12px; }

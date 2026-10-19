@@ -72,7 +72,10 @@ function listenMessages(onNew) {
   Msg.listening = true;
   db.channel('quick-messages')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => {
-      if (p.new.booking_id !== Msg.bookingId) return;
+      if (p.new.booking_id !== Msg.bookingId) {
+        if (App.onOtherMessage) App.onOtherMessage(p.new);
+        return;
+      }
       if (Msg.list.some((m) => m.id === p.new.id)) return;
       Msg.list.push(p.new);
       if (onNew) onNew(p.new);
@@ -353,6 +356,45 @@ function kindOf(tags) {
   return 'tea';
 }
 
+// ---------- Shared places cache ----------
+// Places near a ~1 km map cell are shared by everyone through the database for 7 days.
+// Only when no one has looked up this area recently do we ask the free Overpass servers
+// (two servers are asked at once; the first answer wins). Returns a list, or null if nothing worked.
+const OVERPASS_SERVERS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+const CACHE_DAYS = 7;
+async function placesFromCache(kind, at, query, toPlace, waitMs) {
+  const cell = `${kind}:${at.lat.toFixed(2)},${at.lng.toFixed(2)}`;
+  let stale = null;
+  try {
+    const { data } = await db.from('places_cache').select('list,updated_at').eq('cell', cell).maybeSingle();
+    if (data) {
+      if (Date.now() - Date.parse(data.updated_at) < CACHE_DAYS * 86400000) return data.list;
+      stale = data.list;
+    }
+  } catch (e) { /* no cache: ask Overpass */ }
+  // Ask both servers at once; the first good answer wins and the other request is stopped
+  const stop = new AbortController();
+  const timer = setTimeout(() => stop.abort(), waitMs);
+  try {
+    const json = await Promise.any(OVERPASS_SERVERS.map((server) => fetch(server, {
+      method: 'POST', body: 'data=' + encodeURIComponent(query),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: stop.signal
+    }).then((res) => (res.ok ? res.json() : Promise.reject(new Error('busy'))))));
+    stop.abort();
+    const list = (json.elements || []).map((e) => {
+      const p = e.lat != null ? { lat: e.lat, lng: e.lon } : (e.center ? { lat: e.center.lat, lng: e.center.lon } : null);
+      return p && toPlace(e.tags || {}, p);
+    }).filter(Boolean).slice(0, 100);
+    if (list.length) db.from('places_cache').upsert({ cell, list }).then(() => {});
+    return list;
+  } catch (e) {
+    /* both busy or too slow: fall back to an older saved answer */
+  } finally {
+    clearTimeout(timer);
+  }
+  return stale;
+}
+
 async function loadPlaces() {
   const cached = Store.get('places', null);
   if (cached && cached.list && kmBetween(cached.at, App.here) < 0.5) {
@@ -370,31 +412,15 @@ async function loadPlaces() {
   const q = `[out:json][timeout:25];(` +
     `nwr(around:1500,${lat},${lng})[amenity~"^(drinking_water|shelter|toilets|cafe|fast_food|restaurant)$"];` +
     `nwr(around:1500,${lat},${lng})[shop~"^(convenience|beverages|kiosk|supermarket|bakery)$"];);out center 80;`;
-  const stop = new AbortController();
-  const timer = setTimeout(() => stop.abort(), 60000); // the free server can be slow at busy times
-  try {
-    const res = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      body: 'data=' + encodeURIComponent(q),
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      signal: stop.signal
-    });
-    const json = await res.json();
-    const list = (json.elements || []).map((e) => {
-      const at = e.lat != null ? { lat: e.lat, lng: e.lon } : (e.center ? { lat: e.center.lat, lng: e.center.lon } : null);
-      if (!at) return null;
-      const kind = kindOf(e.tags || {});
-      return { kind, name: (e.tags && (e.tags.name || e.tags['name:en'])) || t(kind), ...at };
-    }).filter(Boolean);
-    if (list.length) {
-      PLACES = list;
-      placesSource = 'live';
-      Store.set('places', { at: { lat, lng }, list });
-    }
-  } catch (e) {
-    /* keep saved places */
-  }
-  clearTimeout(timer);
+  const list = await placesFromCache('rest', { lat, lng }, q, (tags, p) => {
+    const kind = kindOf(tags);
+    return { kind, name: tags.name || tags['name:en'] || t(kind), ...p };
+  }, 30000); // the free servers can be slow at busy times
+  if (list && list.length) {
+    PLACES = list;
+    placesSource = 'live';
+    Store.set('places', { at: { lat, lng }, list });
+  } // otherwise keep the saved places
   placesLoading = false;
   renderPlacesNote();
   if (typeof refreshPlacesOnMap === 'function') refreshPlacesOnMap();

@@ -199,18 +199,17 @@ Open http://localhost:5500. For the live demo, open `/employer/` on one phone or
 
 ## Limits of this prototype
 
-- **No login.** Each phone is identified by a random id saved in the browser. Anyone with the link can read the demo data, including the OTP. Real login (phone OTP through Supabase Auth) is the next step.
-- Payment is recorded and confirmed, not processed. UPI is the next step.
-- Nearby places come from a free public server that can be slow at busy times; saved places show until real ones load, and results are kept for offline use.
-- Booking a new job needs internet. Offline saving covers the worker's in-job actions.
-- Team bookings have no quick messages or tips yet (single bookings have both).
+- **No login yet.** Each phone is identified by a random id saved in the browser, and anyone with the link can read the demo data, including the OTP. Private accounts (Supabase anonymous sign-in, then phone OTP) are the next step.
+- **Payment:** the employer's own UPI app opens with the worker's UPI ID and the amount filled in (`upi://pay`, free). The payment itself is not checked automatically; both sides still confirm in Worker Buddy. A payment gateway with auto-confirm needs business KYC.
+- **Nearby places:** shared through the database for 7 days per ~1 km area (`places_cache`), so only the first lookup in an area asks the free Overpass servers. Two servers are asked at once; if both are down and nobody has looked up the area before, saved places are shown.
+- **Offline:** a new job is saved on the employer's phone and posted when the internet returns ("post now" jobs older than an hour are dropped so no stale job rings workers). The worker's in-job actions are saved offline too.
 - The rights helper matches keywords (works offline); it is not an AI model yet.
-- The QR scanner needs camera permission and HTTPS (Vercel is fine; plain http on a phone is not). The typed code works everywhere.
+- The QR scanner needs camera permission and HTTPS (Vercel is fine). The typed code works everywhere.
 - GST numbers are checked for the right format only, not with the GST portal.
-- Repeat jobs are created when the employer opens the app (no server timer yet).
+- **Repeat jobs** are created by the server every 10 minutes (`pg_cron`), even if the employer never opens the app.
 - The ₹2/day accident cover is an idea for a partner insurer; it is not active.
 - Voice commands use the phone browser's speech recognition (Chrome on Android works best); it needs internet.
 - ITI numbers are self-declared and marked "to verify" until a partner checks them.
-- Arrival time is worked out from straight-line distance at city speed, not from a road route.
+- **Arrival time** uses the road distance from the free OSRM router at city speed (falls back to straight-line distance if the router does not answer).
 - Scheme eligibility is simplified; the app tells users to confirm on the official website.
 - Translations should be checked by a native Tamil and Hindi speaker.

@@ -42,6 +42,7 @@ function editProfile() {
   f.skill.value = W.me ? W.me.skill : 'coolie';
   f.exp.value = W.me ? W.me.experience_years || 0 : 0;
   f.iti.value = W.me ? W.me.iti_cert || '' : '';
+  f.upi.value = W.me ? W.me.upi_id || '' : '';
   f.birth.value = W.me && W.me.birth_year ? W.me.birth_year : '';
   f.state.value = W.me ? W.me.home_state || '' : '';
   f.city.value = W.me ? W.me.city || '' : '';
@@ -61,6 +62,7 @@ async function saveProfile(event) {
   const row = { name: f.name.value.trim(), phone: f.phone.value.replace(/\D/g, ''), skill: f.skill.value,
     experience_years: Math.min(60, Math.max(0, parseInt(f.exp.value, 10) || 0)),
     iti_cert: f.iti.value.trim().length >= 4 ? f.iti.value.trim() : null,
+    upi_id: f.upi.value.trim() || null,
     birth_year: parseInt(f.birth.value, 10) || null,
     home_state: f.state.value.trim() || null,
     city: f.city.value.trim() || null,
@@ -925,5 +927,11 @@ async function init() {
     }
   }, 60000);
 }
+
+// Road distance arrived: redraw the arrival line
+window.addEventListener('wb-eta', () => {
+  const eta = document.querySelector('#activeJob .eta');
+  if (eta && W.active) eta.textContent = `🛵 ${etaText(App.here, W.active)}`;
+});
 
 init();

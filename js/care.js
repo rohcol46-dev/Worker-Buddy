@@ -109,23 +109,10 @@ async function findService(kind) {
   box.innerHTML = `<p class="muted small">${t('searching')}</p>`;
   const a = `${App.here.lat},${App.here.lng}`;
   const q = `[out:json][timeout:25];(${SERVICE_QUERIES[kind](a)});out center 40;`;
-  let list = [];
-  try {
-    const stop = new AbortController();
-    const timer = setTimeout(() => stop.abort(), 45000);
-    const res = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST', body: 'data=' + encodeURIComponent(q),
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: stop.signal
-    });
-    clearTimeout(timer);
-    const json = await res.json();
-    list = (json.elements || []).map((e) => {
-      const at = e.lat != null ? { lat: e.lat, lng: e.lon } : (e.center ? { lat: e.center.lat, lng: e.center.lon } : null);
-      return at && { name: (e.tags && (e.tags.name || e.tags['name:en'])) || t('svc_' + kind), ...at };
-    }).filter(Boolean);
-    Store.set('svc_' + kind, { at: { ...App.here }, list });
-  } catch (e) { /* keep empty: the official links below still help */ }
-  renderServices(kind, list);
+  const list = await placesFromCache(kind, App.here, q,
+    (tags, p) => ({ name: tags.name || tags['name:en'] || t('svc_' + kind), ...p }), 30000) || [];
+  if (list.length) Store.set('svc_' + kind, { at: { ...App.here }, list });
+  renderServices(kind, list); // empty: the official links below still help
 }
 
 function renderServices(kind, list) {
