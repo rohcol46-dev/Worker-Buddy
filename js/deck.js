@@ -57,7 +57,7 @@ function welfareHTML(counts) {
 function openRateCard() {
   const rows = Object.entries(WORK_TYPES).map(([k, w]) =>
     `<div><span>${w.icon} ${t(k)}</span><span>₹${w.min} – ₹${w.max}</span></div>`).join('');
-  const rules = ['ruleExtra', 'ruleHalf', 'ruleLoad', 'ruleRisky', 'ruleHeat', 'ruleNoCut'].map((k) => `<li>${t(k)}</li>`).join('');
+  const rules = ['ruleExtra', 'ruleHalf', 'ruleLoad', 'ruleRisky', 'ruleNight', 'ruleHeat', 'ruleNoCut'].map((k) => `<li>${t(k)}</li>`).join('');
   document.getElementById('slipBody').innerHTML = `
     <div class="slip" id="slipPrint">
       <div class="slip-head"><b>🤝 Worker Buddy</b><span>${t('rateCardTitle')}</span></div>
@@ -66,7 +66,7 @@ function openRateCard() {
     </div>`;
   slipShareText = [`📋 Worker Buddy · ${t('rateCardTitle')}`,
     ...Object.entries(WORK_TYPES).map(([k, w]) => `${t(k)}: ₹${w.min}–₹${w.max}`),
-    ...['ruleExtra', 'ruleHalf', 'ruleLoad', 'ruleRisky', 'ruleHeat', 'ruleNoCut'].map((k) => '• ' + t(k))].join('\n');
+    ...['ruleExtra', 'ruleHalf', 'ruleLoad', 'ruleRisky', 'ruleNight', 'ruleHeat', 'ruleNoCut'].map((k) => '• ' + t(k))].join('\n');
   document.getElementById('slipModal').classList.add('open');
 }
 

@@ -453,3 +453,6 @@ Object.assign(T.hi, {
   effortPayFirst: 'पहले मज़दूर की कठिन काम वाली माँग का जवाब दें',
   effortRefusedCount: (n) => `😓 कठिन काम का पैसा ${n} बार मना किया`
 });
+Object.assign(T.en, { ruleNight: 'Night work (8 PM – 6 AM): +20%' });
+Object.assign(T.ta, { ruleNight: 'இரவு வேலை (இரவு 8 – காலை 6): +20%' });
+Object.assign(T.hi, { ruleNight: 'रात का काम (रात 8 – सुबह 6): +20%' });
