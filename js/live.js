@@ -194,9 +194,12 @@ function ring() {
 
 // A Leaflet map for the top of each app's home screen
 function heroMap(id) {
-  if (typeof L === 'undefined' || !document.getElementById(id)) return null;
-  const m = L.map(id, { zoomControl: false, attributionControl: true }).setView([App.here.lat, App.here.lng], 14);
+  const el = document.getElementById(id);
+  if (typeof L === 'undefined' || !el) return null;
+  if (el.wbMap) return el.wbMap.setView([App.here.lat, App.here.lng], 14); // already made (e.g. right after sign-up)
+  const m = L.map(el, { zoomControl: false, attributionControl: true }).setView([App.here.lat, App.here.lng], 14);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(m);
+  el.wbMap = m;
   return m;
 }
 function pin(html, cls) {

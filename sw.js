@@ -1,7 +1,7 @@
 // sw.js — lets both apps open without internet.
 // App files are kept on the phone; map tiles seen before are kept too.
 // Live data (Supabase, weather, places) always goes to the network.
-const VERSION = 'wb-v6';
+const VERSION = 'wb-v7';
 const APP_FILES = [
   './',
   './index.html',
