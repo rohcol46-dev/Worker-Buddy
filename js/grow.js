@@ -287,23 +287,7 @@ function nextOccurrence(weekday, atTime) {
   return d;
 }
 
-// When the employer opens the app, make sure next week's booking exists for each repeat
-async function ensureRepeats() {
-  if (!navigator.onLine || !E.me) return;
-  const { data: reps } = await db.from('repeat_jobs').select('*').eq('employer_id', E.me.id).eq('active', true);
-  for (const r of reps || []) {
-    const when = nextOccurrence(r.weekday, r.at_time).toISOString();
-    const { data: have } = await db.from('bookings').select('id').eq('repeat_id', r.id).eq('scheduled_for', when).limit(1);
-    if (have && have.length) continue;
-    const size = r.template.group_size || 1;
-    const group = size > 1 ? crypto.randomUUID() : null;
-    const rows = Array.from({ length: size }, () => ({
-      ...r.template, employer_id: E.me.id, scheduled_for: when, repeat_id: r.id, group_id: group,
-      otp: String(Math.floor(1000 + Math.random() * 9000))
-    }));
-    await db.from('bookings').insert(rows);
-  }
-}
+// Repeat jobs are created by the server every 10 minutes (supabase/010_repeat_jobs_cron.sql)
 
 async function stopRepeat(id) {
   await db.from('repeat_jobs').update({ active: false }).eq('id', id).eq('employer_id', E.me.id);

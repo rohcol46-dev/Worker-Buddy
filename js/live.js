@@ -3,7 +3,29 @@
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Each phone gets its own id, so the app remembers who you are without a login
+// Private accounts: each phone signs in once (Supabase anonymous sign-in, no password or SMS).
+// The database then lets this phone change only its own profiles and jobs.
+async function ensureSignedIn() {
+  try {
+    const { data } = await db.auth.getSession();
+    if (!data.session) {
+      if (!navigator.onLine) return false;
+      const { error } = await db.auth.signInAnonymously();
+      if (error) return false;
+    }
+    // Profiles made before accounts existed: this phone claims them once, using its old id
+    const key = 'claimed_' + deviceId();
+    if (!Store.get(key, false) && navigator.onLine) {
+      const { error } = await db.rpc('claim_profiles', { p_device: deviceId() });
+      if (!error) Store.set(key, true);
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Each phone gets its own id: it picks which profile on this phone is "me" (shared phone mode)
 function deviceId() {
   let id = Store.get('device', null);
   if (!id) {

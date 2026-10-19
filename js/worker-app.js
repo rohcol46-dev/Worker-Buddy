@@ -541,6 +541,7 @@ async function startWork() {
   if (r.queued) return localUpdate({ status: 'started', started_at: new Date().toISOString() });
   if (r.error) return showToast(t('saveError'));
   if (r.data === 'too_far') return showToast(t('tooFar'));
+  if (r.data === 'locked') return showToast(t('otpLocked'));
   if (r.data !== 'ok') return showToast(t('wrongOtp'));
   showToast(t('checkedIn'));
   await refreshActive();
@@ -889,6 +890,7 @@ async function init() {
   let offline = !navigator.onLine;
   if (!offline) {
     try {
+      await ensureSignedIn();
       await loadMe();
     } catch (e) {
       offline = true;

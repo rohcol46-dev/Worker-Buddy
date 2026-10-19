@@ -316,3 +316,4 @@ main { padding-bottom: 112px; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 .offline-wait { background: #FFF6DE; border: 1px solid #F5E2AE; border-radius: 14px; padding: 10px 12px; font-weight: 700; margin: 0 0 12px; }
+.otp-new { display: block; margin: 6px auto 0; color: #FFD3B8; }

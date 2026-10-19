@@ -188,7 +188,8 @@ function closeQR() {
 
 // Employer: show the QR the worker scans. Works with no internet.
 async function showPayQR(b, amount) {
-  const code = await payCode(b.otp, amount, b.id);
+  await loadOtps([b.id]);
+  const code = await payCode(otpOf(b), amount, b.id);
   const payload = JSON.stringify({ wb: 1, b: b.id, a: amount, c: code });
   let svg = '';
   if (typeof qrcode === 'function') {
@@ -512,3 +513,39 @@ Object.assign(T.hi, {
   postSentNow: '✅ इंटरनेट आ गया: सेव किया काम पोस्ट हो गया',
   postTooOld: 'बिना इंटरनेट सेव किया काम बहुत पुराना था। कृपया फिर से पोस्ट करें।'
 });
+
+// ---------- Private OTP: only the job's employer can read it (booking_otps table) ----------
+const Otp = Store.get('e_otps', {}) || {};
+const OtpAsked = new Set();
+async function loadOtps(ids) {
+  const need = ids.filter((id) => id && !Otp[id]);
+  if (!need.length || !navigator.onLine) return;
+  const { data } = await db.from('booking_otps').select('booking_id,otp').in('booking_id', need);
+  (data || []).forEach((r) => { Otp[r.booking_id] = r.otp; });
+  Store.set('e_otps', Otp); // the employer can still show it with no internet
+}
+// Shows the OTP if known; otherwise fetches it once and redraws
+function otpOf(b) {
+  if (Otp[b.id]) return Otp[b.id];
+  if (!OtpAsked.has(b.id)) {
+    OtpAsked.add(b.id);
+    loadOtps([b.id]).then(() => { if (Otp[b.id] && App.onOtp) App.onOtp(); });
+  }
+  return '····';
+}
+Object.assign(T.en, { otpLocked: 'Too many wrong OTPs. Ask the employer to call you.' });
+Object.assign(T.ta, { otpLocked: 'பல முறை தவறான OTP. முதலாளியை அழைக்கச் சொல்லுங்கள்.' });
+Object.assign(T.hi, { otpLocked: 'कई बार गलत OTP। मालिक से फ़ोन करने को कहें।' });
+
+// Worker locked out after 5 wrong OTPs: the employer makes a new one
+async function newOtp(id) {
+  const { data, error } = await db.rpc('reset_otp', { p_booking: id, p_employer: E.me.id });
+  if (error || !data) return showToast(t('saveError'));
+  Otp[id] = data;
+  Store.set('e_otps', Otp);
+  showToast(tf('newOtpMade', data));
+  if (App.onOtp) App.onOtp();
+}
+Object.assign(T.en, { newOtp: 'New OTP', newOtpMade: (o) => `New OTP: ${o}. Tell it to the worker.` });
+Object.assign(T.ta, { newOtp: 'புதிய OTP', newOtpMade: (o) => `புதிய OTP: ${o}. வேலையாளிடம் சொல்லுங்கள்.` });
+Object.assign(T.hi, { newOtp: 'नया OTP', newOtpMade: (o) => `नया OTP: ${o}। मज़दूर को बताएँ।` });

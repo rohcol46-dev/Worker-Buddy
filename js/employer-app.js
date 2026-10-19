@@ -285,7 +285,6 @@ async function bookWorker() {
     wage_min: wage.min,
     wage_max: wage.max,
     agreed_wage: agreedWage(job),
-    otp: String(Math.floor(1000 + Math.random() * 9000)),
     scheduled_for: scheduled,
     preferred_worker_id: E.preferred ? E.preferred.id : null,
     bring_tools: E.tools,
@@ -297,7 +296,7 @@ async function bookWorker() {
   if (scheduled && document.getElementById('repeatInput').checked) {
     const at = new Date(scheduled);
     const template = { ...row, group_size: E.team };
-    ['employer_id', 'otp', 'scheduled_for', 'preferred_worker_id', 'priority_ids'].forEach((k) => delete template[k]);
+    ['employer_id', 'scheduled_for', 'preferred_worker_id', 'priority_ids'].forEach((k) => delete template[k]);
     repeat = { employer_id: E.me.id, template, weekday: at.getDay(),
       at_time: `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}` };
   }
@@ -306,7 +305,7 @@ async function bookWorker() {
     // Team booking: one booking per worker, linked by group_id; each rings separately
     const group = crypto.randomUUID();
     rows = Array.from({ length: E.team }, () => ({
-      ...row, group_id: group, group_size: E.team, otp: String(Math.floor(1000 + Math.random() * 9000))
+      ...row, group_id: group, group_size: E.team
     }));
   }
   const post = { rows, repeat, savedAt: Date.now() };
@@ -464,7 +463,8 @@ function renderBooking() {
   if (b.status === 'assigned') {
     action = `${b.scheduled_for ? `<p><b>${tf('scheduledFor', whenText(b))}</b></p>` : ''}
       <p id="etaLine" class="eta"></p>
-      <div class="otp-show"><small>${t('shareOtp')}</small><b>${b.otp.split('').join(' ')}</b></div>
+      <div class="otp-show"><small>${t('shareOtp')}</small><b>${otpOf(b).split('').join(' ')}</b>
+        <button class="link-btn small otp-new" onclick="newOtp('${b.id}')">🔄 ${t('newOtp')}</button></div>
       <button class="btn btn-light btn-block" onclick="cancelAssigned()">${t('cancelJob')}</button>`;
   } else if (b.status === 'started') {
     action = `<div class="big-timer"><small>${t('workInProgress')}</small><b id="workClock">0:00</b></div>
@@ -617,7 +617,7 @@ function crewSlotHTML(b, i) {
   else {
     let action = '';
     if (b.status === 'assigned') {
-      action = `<span class="otp-mini">OTP <b>${b.otp}</b></span>${w && w.lat != null ? ` <small class="muted">🛵 ${etaText(w, b)}</small>` : ''}`;
+      action = `<span class="otp-mini">OTP <b>${otpOf(b)}</b></span>${w && w.lat != null ? ` <small class="muted">🛵 ${etaText(w, b)}</small>` : ''}`;
     } else if (b.status === 'started') {
       action = `<span class="badge badge-accepted">${statusLabel('started')}</span>`;
     } else if (b.status === 'completed') {
@@ -1118,6 +1118,7 @@ App.onShow = (id) => {
 App.onHeat = () => { if (E.me) renderEstimate(); };
 App.onMove = () => {};
 App.onMessages = () => (E.crewChat ? drawCrewChat() : renderBooking());
+App.onOtp = () => { if (!E.crewChat && !E.crewPay) renderBooking(); };
 // A message from a team member whose chat is not open: still tell the employer
 App.onOtherMessage = (m) => {
   const b = E.crew.find((x) => x.id === m.booking_id);
@@ -1147,7 +1148,6 @@ async function startApp() {
   if (!navigator.onLine) return;
   await loadFavorites();
   await loadWorkers();
-  ensureRepeats();
   await loadOpenBooking();
   syncForm();
   listenMaterials((row, kind) => {
@@ -1203,6 +1203,7 @@ async function init() {
   let offline = !navigator.onLine;
   if (!offline) {
     try {
+      await ensureSignedIn();
       await loadMe();
     } catch (e) {
       offline = true;

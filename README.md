@@ -199,7 +199,7 @@ Open http://localhost:5500. For the live demo, open `/employer/` on one phone or
 
 ## Limits of this prototype
 
-- **No login yet.** Each phone is identified by a random id saved in the browser, and anyone with the link can read the demo data, including the OTP. Private accounts (Supabase anonymous sign-in, then phone OTP) are the next step.
+- **Accounts:** each phone signs in once with Supabase anonymous sign-in (no password or SMS) and owns the profiles it creates. Every action is checked in the database (`assert_mine`), the OTP lives in a private table only that job's employer can read, and 5 wrong OTPs lock the code until the employer makes a new one. Clearing the browser's data loses the account; linking it to a phone number (Supabase phone OTP, needs an SMS provider) is the next step. Names, skills and phone numbers on profiles are still readable by anyone with the app link.
 - **Payment:** the employer's own UPI app opens with the worker's UPI ID and the amount filled in (`upi://pay`, free). The payment itself is not checked automatically; both sides still confirm in Worker Buddy. A payment gateway with auto-confirm needs business KYC.
 - **Nearby places:** shared through the database for 7 days per ~1 km area (`places_cache`), so only the first lookup in an area asks the free Overpass servers. Two servers are asked at once; if both are down and nobody has looked up the area before, saved places are shown.
 - **Offline:** a new job is saved on the employer's phone and posted when the internet returns ("post now" jobs older than an hour are dropped so no stale job rings workers). The worker's in-job actions are saved offline too.
