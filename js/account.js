@@ -109,12 +109,11 @@ function accountHTML() {
        <p class="muted small">${[g ? `Google: ${esc((g.identity_data && g.identity_data.email) || u.email || '')}` : '', u.phone ? `📱 +${esc(u.phone)}` : ''].filter(Boolean).join(' · ')}</p>`
     : `<b>🔐 ${t(Acc.haveProfile() ? 'accProtectTitle' : 'accHaveTitle')}</b>
        <p class="muted small">${t(Acc.haveProfile() ? 'accProtectHint' : 'accHaveHint')}</p>`;
-  const on = Acc.providers || {};
-  const google = g || !on.google ? '' : `<button type="button" class="btn btn-light btn-block btn-google" onclick="accSignInGoogle()">
+  const google = g ? '' : `<button type="button" class="btn btn-light btn-block btn-google" onclick="accSignInGoogle()">
       <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
       ${t(Acc.haveProfile() && !linked ? 'accLinkGoogle' : 'accGoogle')}</button>`;
   let phone = '';
-  if (!(u && u.phone) && on.phone) {
+  if (!(u && u.phone)) {
     phone = Acc.step === 'otp'
       ? `<form class="row acc-row" onsubmit="accVerifyOtp(event)">
            <input name="code" class="input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required placeholder="${attr(tf('accCodePh', Acc.phone))}">
@@ -132,13 +131,35 @@ function accountHTML() {
 }
 
 async function renderAccount() {
-  await accProviders();
-  const on = Acc.providers || {};
-  const linked = Acc.user && !Acc.user.is_anonymous;
-  document.querySelectorAll('.account-box').forEach((box) => {
-    box.hidden = !linked && !on.google && !on.phone; // nothing to offer yet
-    box.innerHTML = box.hidden ? '' : accountHTML();
-  });
+  accProviders();
+  document.querySelectorAll('.account-box').forEach((box) => { box.hidden = false; box.innerHTML = accountHTML(); });
+  renderAccountButton();
+}
+
+// The 👤 button in the top bar of both apps: "Sign in", or who is signed in
+function renderAccountButton() {
+  const btn = document.getElementById('accBtn');
+  if (!btn) return;
+  const u = Acc.user;
+  const g = accGoogle(u);
+  const who = u && !u.is_anonymous
+    ? ((g && g.identity_data && g.identity_data.email) || u.email || (u.phone ? '+' + u.phone : '')).split('@')[0] : '';
+  btn.textContent = who ? `✅ ${who.slice(0, 14)}` : `👤 ${t('accSignInShort')}`;
+}
+
+function openAccount() {
+  let m = document.getElementById('accountModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'accountModal';
+    m.className = 'modal';
+    m.innerHTML = `<div class="modal-box"><div class="account-box"></div>
+      <button class="btn btn-light btn-block" onclick="closeModal('accountModal')">${t('close')}</button></div>`;
+    m.addEventListener('click', (e) => { if (e.target === m) closeModal('accountModal'); });
+    document.body.appendChild(m);
+  }
+  renderAccount();
+  m.classList.add('open');
 }
 
 // Called once at start. haveProfile tells if this phone already has a profile; onSignedIn reloads it.
@@ -177,7 +198,8 @@ Object.assign(T.en, {
   accDone: '✅ Signed in. Your account is saved.',
   accSignOut: 'Sign out',
   accSignOutAsk: 'Sign out on this phone? Sign in again with the same Google account or number to get everything back.',
-  accNotOn: 'This sign-in option is not switched on yet. Use Continue for now.',
+  accNotOn: 'This sign-in option is still being set up by the Worker Buddy team. Use Continue for now; your account stays on this phone.',
+  accSignInShort: 'Sign in',
   accTaken: 'That Google account or number already has a Worker Buddy account. Sign out, then sign in with it.',
   accBadOtp: 'Wrong or expired code. Try again.',
   accSlowDown: 'Too many tries. Wait a minute and try again.',
@@ -202,7 +224,8 @@ Object.assign(T.ta, {
   accDone: '✅ உள்நுழைந்தீர்கள். கணக்கு சேமிக்கப்பட்டது.',
   accSignOut: 'வெளியேறு',
   accSignOutAsk: 'இந்த போனில் வெளியேறவா? அதே Google அல்லது எண்ணில் மீண்டும் உள்நுழைந்தால் அனைத்தும் திரும்ப வரும்.',
-  accNotOn: 'இந்த உள்நுழைவு வசதி இன்னும் இயக்கப்படவில்லை. இப்போது "தொடர்" பயன்படுத்தவும்.',
+  accNotOn: 'இந்த உள்நுழைவு வசதி இன்னும் அமைக்கப்படுகிறது. இப்போது "தொடர்" பயன்படுத்தவும்; உங்கள் கணக்கு இந்த போனில் இருக்கும்.',
+  accSignInShort: 'உள்நுழை',
   accTaken: 'அந்த Google கணக்கு அல்லது எண்ணுக்கு ஏற்கனவே கணக்கு உள்ளது. வெளியேறி, அதில் உள்நுழையவும்.',
   accBadOtp: 'தவறான அல்லது காலாவதியான குறியீடு. மீண்டும் முயலவும்.',
   accSlowDown: 'அதிக முயற்சிகள். ஒரு நிமிடம் கழித்து முயலவும்.',
@@ -227,7 +250,8 @@ Object.assign(T.hi, {
   accDone: '✅ साइन इन हो गया। खाता सुरक्षित है।',
   accSignOut: 'साइन आउट',
   accSignOutAsk: 'इस फ़ोन पर साइन आउट करें? उसी Google या नंबर से फिर साइन इन करके सब वापस पाएँ।',
-  accNotOn: 'यह साइन-इन विकल्प अभी चालू नहीं है। अभी "जारी रखें" इस्तेमाल करें।',
+  accNotOn: 'यह साइन-इन विकल्प अभी तैयार किया जा रहा है। अभी "जारी रखें" इस्तेमाल करें; आपका खाता इसी फ़ोन पर रहेगा।',
+  accSignInShort: 'साइन इन',
   accTaken: 'उस Google खाते या नंबर पर पहले से खाता है। साइन आउट करके उससे साइन इन करें।',
   accBadOtp: 'गलत या पुराना कोड। फिर कोशिश करें।',
   accSlowDown: 'बहुत ज़्यादा कोशिशें। एक मिनट बाद फिर करें।',

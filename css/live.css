@@ -303,3 +303,4 @@ body.onboarding .mic-btn { display: none; }
 .cancel-reasons .check:has(input:checked) { border-color: #E4561B; background: #FFF4EC; }
 .btn-danger { background: #D93025; color: #fff; }
 .cancel-reasons [hidden] { display: none; }
+.acc-btn { white-space: nowrap; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }

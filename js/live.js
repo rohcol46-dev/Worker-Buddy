@@ -143,6 +143,7 @@ function applyLang() {
   document.querySelectorAll('[data-t-ph]').forEach((el) => { el.placeholder = t(el.dataset.tPh); });
   const sel = document.getElementById('langSelect');
   if (sel) sel.value = App.lang;
+  if (typeof renderAccount === 'function' && typeof Acc !== 'undefined' && Acc.haveProfile) renderAccount();
 }
 
 function show(id) {
