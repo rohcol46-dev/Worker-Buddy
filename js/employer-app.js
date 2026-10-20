@@ -570,8 +570,7 @@ function renderBooking() {
       </div>
       ${b.effort_status === 'pending' ? `<p class="dispute-note">${t('effortPayFirst')}</p>` : `
       ${upiPayHTML(b, E.worker, amount + E.tip + approvedMaterials())}
-      <button class="btn btn-accept btn-block btn-big" onclick="payWorker()">${tf('payNow', amount + E.tip + approvedMaterials())}</button>
-      <button class="btn btn-dark btn-block" onclick="showPayQR(E.booking, amountOf(E.booking) + E.tip + approvedMaterials())">${t('qrPayBtn')}</button>`}`;
+      <button class="btn btn-accept btn-block btn-big" onclick="payWorker()">${tf('payNow', amount + E.tip + approvedMaterials())}</button>`}`;
   } else if (b.status === 'paid' && b.worker_confirmed_at) {
     action = `<p class="paid-ok">✅ ${t('slipConfirmed')}${b.tip ? ` · 🙏 ${t('tipLabel')} ₹${b.tip}` : ''}</p>
       <button class="btn btn-dark btn-block" onclick="openSlip(E.booking, E.me, E.worker)">${t('viewSlip')}</button>`;

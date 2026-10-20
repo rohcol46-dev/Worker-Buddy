@@ -57,7 +57,7 @@ Object.assign(T.ta, { byRoad: 'சாலை வழி' });
 Object.assign(T.hi, { byRoad: 'सड़क से' });
 
 function directionsUrl(b) {
-  return `https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lng}`;
+  return mapsDirections(b, false);
 }
 
 // Worker phone sends its position every 10 seconds while going to the job

@@ -118,7 +118,7 @@ async function findService(kind) {
 function renderServices(kind, list) {
   const rows = list.map((p) => ({ ...p, km: distanceKm(App.here, p) })).sort((x, y) => x.km - y.km).slice(0, 10)
     .map((p) => `<div class="rest-item"><span>${SERVICE_ICONS[kind]} ${esc(p.name)}</span>
-      <span class="muted small">${p.km.toFixed(1)} km · <a target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}">${t('directions')}</a></span></div>`).join('');
+      <span class="muted small">${p.km.toFixed(1)} km · ${directionsLink(p, p.km < 2)}</span></div>`).join('');
   const extra = kind === 'ration'
     ? `<p class="small">${t('onorcNote')} <a target="_blank" rel="noopener" href="https://play.google.com/store/search?q=Mera%20Ration">Mera Ration</a></p>` : '';
   document.getElementById('serviceList').innerHTML = (rows || `<p class="muted small">${t('svcNone')}</p>`) + extra;

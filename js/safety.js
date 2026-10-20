@@ -10,6 +10,15 @@ function distanceKm(a, b) {
   return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
+// Google Maps directions from here (opens the Google Maps app on a phone). Walking for nearby places.
+function mapsDirections(p, walk) {
+  // No origin: Google Maps starts from the phone's real location
+  return `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}` + (walk ? '&travelmode=walking' : '');
+}
+function directionsLink(p, walk) {
+  return `<a class="dir-link" target="_blank" rel="noopener" href="${mapsDirections(p, walk)}">${t('directions')}</a>`;
+}
+
 // "3.2 km · ~₹10 bus" from where the worker is to the job's area
 function distanceText(job) {
   const spot = job.lat != null ? [job.lat, job.lng] : AREAS[job.area];
@@ -100,7 +109,7 @@ function refreshPlacesOnMap() {
   placeLayer.clearLayers();
   currentPlaces().forEach((p) => {
     const icon = L.divIcon({ className: 'map-pin', html: REST_ICONS[p.kind], iconSize: [32, 32] });
-    L.marker([p.lat, p.lng], { icon }).addTo(placeLayer).bindPopup(`<b>${esc(p.name)}</b><br>${t(p.kind)}`);
+    L.marker([p.lat, p.lng], { icon }).addTo(placeLayer).bindPopup(`<b>${esc(p.name)}</b><br>${t(p.kind)}<br>${directionsLink(p, true)}`);
   });
 }
 
@@ -114,7 +123,7 @@ function renderRestList() {
   document.getElementById('restList').innerHTML = points.map((p) => `
     <div class="rest-item">
       <span>${REST_ICONS[p.kind]} ${esc(p.name)}</span>
-      <span class="muted small">${Math.round(p.km * 1000)} m</span>
+      <span class="muted small">${p.km < 1 ? Math.round(p.km * 1000) + ' m' : p.km.toFixed(1) + ' km'} · ${directionsLink(p, p.km < 2)}</span>
     </div>`).join('');
 }
 

@@ -463,8 +463,7 @@ function renderActive() {
       ${b.travel_pay ? `<p class="small">${tf('travelTag', b.travel_pay)}</p>` : ''}
       ${b.rain_off ? `<p class="overtime">${tf('rainNote', amount)}</p>` : ''}
       ${W.me.upi_id ? `<button class="btn btn-upi btn-block btn-big" onclick="showUpiQR(W.active, W.me, amountOf(W.active) + approvedMaterials())">${tf('myUpiQrBtn', amount + approvedMaterials())}</button>`
-        : `<p class="muted small">${t('noUpiYet')}</p>`}
-      <button class="btn btn-dark btn-block" onclick="scanQR()">${t('qrScanBtn')}</button>`;
+        : `<p class="muted small">${t('noUpiYet')}</p>`}`;
   } else if (b.status === 'paid' && !b.worker_confirmed_at) {
     // Proof of pay: the worker has the final word
     speech = tf('employerSaysPaid', amount);

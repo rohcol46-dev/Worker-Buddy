@@ -38,7 +38,7 @@ Team **Tyrex** · Team ID **DEX26189** · Sathyabama Dexathon 2026
 | # | Feature | Where |
 |---|---|---|
 | 1 | **Show-up pay** ₹100 when the employer cancels after the worker set off; they can't post again until it is paid | Employer: Bookings · Worker: Earnings |
-| 2 | **QR proof of pay, works offline**: the employer shows a QR, the worker scans it (or types the code), and it's checked with the job's OTP | Completed job, both apps |
+| 2 | **UPI pay QR**: the worker shows a standard UPI QR (their UPI ID and the job amount) that the employer scans with GPay, PhonePe, Paytm, FamPay or any UPI app; the worker then taps "I got it" to confirm | Completed job, both apps |
 | 3 | **Rights helper**: ask by voice or text in Tamil, Hindi or English ("is ₹400 fair for a coolie?", "not paid", "hurt"), answers read aloud, helplines | Worker: Safety |
 | 4 | **Contractor (mestri) crew book**: members, daily attendance, weekly pay, pay slip by SMS or WhatsApp | Worker: 👥 Crew tab |
 | 5 | **Wage map**: what people were actually paid, by area and skill | `/wages/` (linked everywhere) |
@@ -179,7 +179,7 @@ Open http://localhost:5500. For the live demo, open `/employer/` on one phone or
 | `employer/index.html`, `js/employer-app.js` | Employer app | Member 2 |
 | `js/features.js` | Proof of pay, wage record, offline queue, quick messages, read-aloud, nearby places | Member 4 |
 | `js/lang-hi.js` | Hindi text | Member 1 |
-| `js/fair.js` | Show-up pay, QR proof of pay, travel, rain-off, tools, materials, meal/water tags, SMS slips | Member 2 |
+| `js/fair.js` | Show-up pay, UPI pay QR, travel, rain-off, tools, materials, meal/water tags, SMS slips | Member 2 |
 | `js/care.js` | Rights helper, 18+, night jobs, site check-in, migrants, ration/stay/crèche finders | Member 3 |
 | `js/grow.js` | Crew book, lessons, availability, cover, favourites, monthly report, repeat jobs, shared phone | Member 1 |
 | `js/pages.js`, `wages/`, `dispute/` | Wage map and dispute room pages | Member 3 |
@@ -213,7 +213,7 @@ The buttons are built in; they say "not switched on yet" until these are set in 
 - **Nearby places:** shared through the database for 7 days per ~1 km area (`places_cache`), so only the first lookup in an area asks the free Overpass servers. Two servers are asked at once; if both are down and nobody has looked up the area before, saved places are shown.
 - **Offline:** a new job is saved on the employer's phone and posted when the internet returns ("post now" jobs older than an hour are dropped so no stale job rings workers). The worker's in-job actions are saved offline too.
 - The rights helper matches keywords (works offline); it is not an AI model yet.
-- The QR scanner needs camera permission and HTTPS (Vercel is fine). The typed code works everywhere.
+- **Maps:** the in-app maps use free OpenStreetMap tiles. Every place (job site, rest points, water, shade, tea, toilets, services) has a 🧭 Directions link that opens Google Maps with the route. Showing Google's own map inside the app needs a Google Maps API key with billing turned on.
 - GST numbers are checked for the right format only, not with the GST portal.
 - **Repeat jobs** are created by the server every 10 minutes (`pg_cron`), even if the employer never opens the app.
 - The ₹2/day accident cover is an idea for a partner insurer; it is not active.
