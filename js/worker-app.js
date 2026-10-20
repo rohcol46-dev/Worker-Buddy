@@ -34,7 +34,7 @@ async function loadMe() {
   if (error) throw error;
   const u = !data && (await db.auth.getSession()).data.session;
   if (u) {
-    const mine = await db.from('workers').select('*').eq('auth_id', u.user.id).order('created_at', { ascending: false }).limit(1);
+    const mine = await db.from('workers').select('*').eq('auth_id', u.user.id).order('updated_at', { ascending: false }).limit(1);
     data = (mine.data || [])[0] || null;
     if (data && data.device_id) Store.set('device', data.device_id);
   }

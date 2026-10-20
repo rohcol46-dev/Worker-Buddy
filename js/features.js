@@ -252,8 +252,17 @@ function downloadCSV(worker, slips) {
 // 2) Actions done offline are saved and sent when the internet is back.
 function registerOffline() {
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register(new URL('../sw.js', location.href), { scope: new URL('../', location.href).pathname })
+    const hadOld = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register(new URL('../sw.js', location.href), { scope: new URL('../', location.href).pathname, updateViaCache: 'none' })
+      .then((reg) => reg.update())
       .catch(() => { /* offline support is a bonus; the app still works online */ });
+    // A new version took over: reload once so every screen uses it (not the old saved copy)
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadOld && !sessionStorage.getItem('wb_reloaded')) {
+        sessionStorage.setItem('wb_reloaded', '1');
+        location.reload();
+      }
+    });
   }
   window.addEventListener('online', () => { renderOfflineBanner(); flushQueue(); });
   window.addEventListener('offline', renderOfflineBanner);

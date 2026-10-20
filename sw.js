@@ -1,7 +1,8 @@
 // sw.js — lets both apps open without internet.
-// App files are kept on the phone; map tiles seen before are kept too.
+// App files come from the network when online (so a new version shows at once) and from the
+// phone when offline; map tiles seen before are kept too.
 // Live data (Supabase, weather, places) always goes to the network.
-const VERSION = 'wb-v14';
+const VERSION = 'wb-v15';
 const APP_FILES = [
   './',
   './index.html',
@@ -47,7 +48,10 @@ const APP_FILES = [
 const TILE_LIMIT = 300;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(VERSION).then((c) => c.addAll(APP_FILES)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the browser's own cache, so the saved copy is the new version
+  event.waitUntil(caches.open(VERSION)
+    .then((c) => c.addAll(APP_FILES.map((u) => new Request(u, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -80,17 +84,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // App files: answer from the phone straight away, refresh in the background
+  // App files: the network first (new versions show at once), the saved copy when offline or slow
   const isAppFile = url.origin === self.location.origin || APP_FILES.includes(req.url);
   if (!isAppFile) return; // live data goes to the network as normal
   event.respondWith(
     caches.open(VERSION).then(async (cache) => {
-      const hit = await cache.match(req, { ignoreSearch: true });
-      const fresh = fetch(req).then((res) => {
+      const saved = () => cache.match(req, { ignoreSearch: true });
+      try {
+        const res = await Promise.race([
+          fetch(req, { cache: 'no-cache' }),
+          new Promise((_, no) => setTimeout(() => no(new Error('slow')), 5000))
+        ]);
         if (res.ok) cache.put(req, res.clone());
         return res;
-      }).catch(() => hit);
-      return hit || fresh;
+      } catch (e) {
+        return (await saved()) || Response.error();
+      }
     })
   );
 });
