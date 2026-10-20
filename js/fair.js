@@ -608,3 +608,32 @@ Object.assign(T.hi, {
   siteHint: '📌 सही जगह के लिए नक्शे पर टैप करें या पिन खींचें।',
   siteNotFound: 'वह जगह नहीं मिली। नक्शे पर टैप करके जगह चुनें।'
 });
+
+// Closing a job without payment
+Object.assign(T.en, {
+  closeUnpaidBtn: 'Close this job without paying',
+  closeUnpaidWarn: 'Close this job without paying? Only do this for a test job or if the work was not done. It counts as an unpaid job and lowers your Fair Pay Score, and the worker can use it as proof in a complaint.',
+  workerCloseBtn: 'Close this job (no payment)',
+  workerCloseWarn: 'Close this job without getting paid? Do this only for a test job, or if you agree to let it go.',
+  closedUnpaid: 'Job closed. No payment recorded.',
+  workerClosedNote: 'The worker closed this job with no payment. Nothing is owed.',
+  employerClosedUnpaid: '⚠️ The employer closed this job without paying. It is saved as proof, and their Fair Pay Score went down. Free legal help: 15100.'
+});
+Object.assign(T.ta, {
+  closeUnpaidBtn: 'பணம் செலுத்தாமல் இந்த வேலையை மூடு',
+  closeUnpaidWarn: 'பணம் செலுத்தாமல் இந்த வேலையை மூடவா? சோதனை வேலை அல்லது வேலை நடக்கவில்லை என்றால் மட்டும் செய்யுங்கள். இது செலுத்தாத வேலையாகக் கணக்கிடப்பட்டு உங்கள் Fair Pay மதிப்பெண் குறையும்; வேலையாள் இதைப் புகாருக்குச் சான்றாகப் பயன்படுத்தலாம்.',
+  workerCloseBtn: 'இந்த வேலையை மூடு (பணம் இல்லை)',
+  workerCloseWarn: 'கூலி பெறாமல் இந்த வேலையை மூடவா? சோதனை வேலை அல்லது நீங்கள் விட்டுவிட ஒப்புக்கொண்டால் மட்டும்.',
+  closedUnpaid: 'வேலை மூடப்பட்டது. கட்டணம் பதிவாகவில்லை.',
+  workerClosedNote: 'வேலையாள் இந்த வேலையைப் பணம் இல்லாமல் மூடினார். எதுவும் தர வேண்டியதில்லை.',
+  employerClosedUnpaid: '⚠️ முதலாளி பணம் செலுத்தாமல் வேலையை மூடினார். இது சான்றாகச் சேமிக்கப்பட்டது; அவரது Fair Pay மதிப்பெண் குறைந்தது. இலவச சட்ட உதவி: 15100.'
+});
+Object.assign(T.hi, {
+  closeUnpaidBtn: 'भुगतान किए बिना यह काम बंद करें',
+  closeUnpaidWarn: 'भुगतान किए बिना यह काम बंद करें? केवल टेस्ट काम के लिए या अगर काम नहीं हुआ। यह बिना भुगतान वाला काम गिना जाएगा और आपका Fair Pay स्कोर घटेगा; मज़दूर इसे शिकायत में सबूत की तरह इस्तेमाल कर सकता है।',
+  workerCloseBtn: 'यह काम बंद करें (कोई भुगतान नहीं)',
+  workerCloseWarn: 'बिना पैसे लिए यह काम बंद करें? केवल टेस्ट काम के लिए या अगर आप छोड़ने को तैयार हैं।',
+  closedUnpaid: 'काम बंद हुआ। कोई भुगतान दर्ज नहीं।',
+  workerClosedNote: 'मज़दूर ने यह काम बिना भुगतान के बंद किया। कुछ देना बाकी नहीं।',
+  employerClosedUnpaid: '⚠️ मालिक ने बिना भुगतान के काम बंद किया। यह सबूत के रूप में सहेजा गया है और उनका Fair Pay स्कोर घटा। मुफ़्त कानूनी मदद: 15100.'
+});

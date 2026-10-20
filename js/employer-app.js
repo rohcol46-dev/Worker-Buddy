@@ -531,6 +531,7 @@ function renderBooking() {
       <div class="searching">
         <div class="job-icon">😕</div>
         <h2>${b.status === 'expired' ? t('noWorkerFound') : statusLabel(b.status)}</h2>
+        ${b.cancel_reason === 'closed_by_worker' ? `<p class="muted">${t('workerClosedNote')}</p>` : ''}
         ${b.preferred_worker_id ? `<button class="btn btn-primary btn-block btn-big" onclick="retryBooking(true)">${t('sendToAllBtn')}</button>`
           : `<button class="btn btn-primary btn-block btn-big" onclick="retryBooking()">${t('tryAgain')}</button>`}
         <button class="btn btn-light btn-block" onclick="newBooking()">${t('bookAgain')}</button>
@@ -552,7 +553,8 @@ function renderBooking() {
     action = `<div class="big-timer"><small>${t('workInProgress')}</small><b id="workClock">0:00</b></div>
       <p id="overtimeLine" class="overtime" hidden></p>
       ${App.isHot ? `<p class="heat-work">${t('heatEmployerNote')}</p>` : ''}
-      <button class="btn btn-light btn-block" onclick="rainStop()">${t('rainStop')}</button>`;
+      <button class="btn btn-light btn-block" onclick="rainStop()">${t('rainStop')}</button>
+      <button class="link-btn small close-unpaid" onclick="closeUnpaid()">${t('closeUnpaidBtn')}</button>`;
   } else if (b.status === 'completed') {
     action = `
       <div class="agreement">
@@ -570,7 +572,8 @@ function renderBooking() {
       </div>
       ${b.effort_status === 'pending' ? `<p class="dispute-note">${t('effortPayFirst')}</p>` : `
       ${upiPayHTML(b, E.worker, amount + E.tip + approvedMaterials())}
-      <button class="btn btn-accept btn-block btn-big" onclick="payWorker()">${tf('payNow', amount + E.tip + approvedMaterials())}</button>`}`;
+      <button class="btn btn-accept btn-block btn-big" onclick="payWorker()">${tf('payNow', amount + E.tip + approvedMaterials())}</button>`}
+      <button class="link-btn small close-unpaid" onclick="closeUnpaid()">${t('closeUnpaidBtn')}</button>`;
   } else if (b.status === 'paid' && b.worker_confirmed_at) {
     action = `<p class="paid-ok">✅ ${t('slipConfirmed')}${b.tip ? ` · 🙏 ${t('tipLabel')} ₹${b.tip}` : ''}</p>
       <button class="btn btn-dark btn-block" onclick="openSlip(E.booking, E.me, E.worker)">${t('viewSlip')}</button>`;
@@ -853,6 +856,16 @@ async function rainStop() {
 function setTip(n) {
   E.tip = n;
   renderBooking();
+}
+
+// No payment (for example a test job): the job closes, and counts as not paid on the Fair Pay Score
+async function closeUnpaid() {
+  if (!confirm(t('closeUnpaidWarn'))) return;
+  const { data, error } = await db.rpc('close_unpaid', { p_booking: E.booking.id, p_worker: null, p_employer: E.me.id });
+  if (error || !data) return showToast(t('saveError'));
+  showToast(t('closedUnpaid'));
+  await loadMe();
+  newBooking();
 }
 
 async function cancelAssigned() {
