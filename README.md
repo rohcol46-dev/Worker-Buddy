@@ -49,7 +49,7 @@ Team **Tyrex** · Team ID **DEX26189** · Sathyabama Dexathon 2026
 | 10 | **Meal / water / shade / toilet provided** tags | Post form, request, WhatsApp text |
 | 11 | **18+ only**: birth year at sign-up, checked by the database too | Worker sign-up |
 | 12 | **Night jobs** (8 PM–6 AM) only from GST-verified employers; workers are told to share with family | Employer: Bookings (GST) |
-| 13 | **Site check-in**: the OTP only starts work within 1 km of the site | Start work |
+| 13 | **Site check-in**: work starts with the employer's OTP; there is no distance limit, so any worker can take a job anywhere. Where the worker started is saved for the evidence page | Start work |
 | 14 | **Dispute room**: one page with every piece of evidence and server times, to print or share | `/dispute/?b=…`, ⚖️ buttons |
 | 15 | **Migrant workers**: home state and city on the profile; ratings and records move with them | Sign-up / profile |
 | 16–18 | **Ration shop, place to stay, crèche/school finders** (OpenStreetMap), plus One Nation One Ration Card info | Worker: Safety |

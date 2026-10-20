@@ -288,3 +288,5 @@ body.onboarding .mic-btn { display: none; }
 .effort .chip input { margin-right: 4px; }
 .effort-ok { background: #E8F7EE; border-color: #8BD3A7; }
 .effort-no { background: #FDECEC; border-color: #F0A3A3; }
+
+.pin-site { border-color: #E4561B !important; border-width: 3px !important; font-size: 20px; }

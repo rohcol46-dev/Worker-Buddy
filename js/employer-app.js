@@ -229,22 +229,97 @@ function renderEstimate() {
     : E.preferred ? `${tf('requestThis', E.preferred.name)} · ₹${agreedWage(job)}` : tf('bookNow', agreedWage(job));
 }
 
+// ---------- The exact work site ----------
+// The employer can pick a locality from the list, type any street / building / landmark
+// (looked up on OpenStreetMap), use GPS, or tap the map. A 📌 pin shows the exact spot
+// and can be dragged. The street name for GPS and map taps comes from OpenStreetMap too.
+const GEO = 'https://nominatim.openstreetmap.org';
+
+function nearestAreaName(p) {
+  const near = Object.entries(AREAS)
+    .map(([name, a]) => ({ name, km: distanceKm(p, { lat: a[0], lng: a[1] }) }))
+    .sort((a, b) => a.km - b.km)[0];
+  return near && near.km < 3 ? near.name : null;
+}
+
+function setSite(p, label) {
+  E.site = { lat: p.lat, lng: p.lng };
+  if (label) {
+    document.getElementById('areaInput').value = label.slice(0, 80);
+    E.siteText = label.slice(0, 80);
+  }
+  if (!E.map) return;
+  if (!E.siteMarker) {
+    E.siteMarker = L.marker([p.lat, p.lng], { icon: pin('📌', 'pin-site'), draggable: true, zIndexOffset: 400 }).addTo(E.map);
+    E.siteMarker.on('dragend', () => pinMoved(E.siteMarker.getLatLng()));
+  }
+  E.siteMarker.setLatLng([p.lat, p.lng]);
+  E.map.setView([p.lat, p.lng], Math.max(E.map.getZoom(), 16));
+}
+
+// "12, Gandhi Road, Velachery" from a map spot
+async function streetName(p) {
+  try {
+    const r = await fetch(`${GEO}/reverse?format=jsonv2&zoom=18&lat=${p.lat}&lon=${p.lng}&accept-language=en`);
+    const a = (await r.json()).address || {};
+    const parts = [a.house_number, a.road || a.pedestrian || a.footway,
+      a.neighbourhood || a.quarter || a.suburb || a.village, a.city_district || a.town || a.city]
+      .filter(Boolean).filter((x, i, all) => all.indexOf(x) === i);
+    return parts.length ? parts.slice(0, 3).join(', ') : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function pinMoved(p) {
+  setSite(p, nearestAreaName(p) || `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`);
+  const name = navigator.onLine ? await streetName(p) : null;
+  if (name && E.site && E.site.lat === p.lat) {
+    document.getElementById('areaInput').value = name.slice(0, 80);
+    E.siteText = name.slice(0, 80);
+  }
+}
+
+// Typed text → the spot on the map (list first, then OpenStreetMap)
+async function findSite(text) {
+  const spot = AREAS[text];
+  if (spot) return { lat: spot[0], lng: spot[1] };
+  if (!navigator.onLine) return null;
+  // A long address is tried whole, then without its first part ("No. 4, 2nd Street, Adyar" → "2nd Street, Adyar" → "Adyar")
+  const parts = text.split(',').map((x) => x.trim()).filter(Boolean);
+  try {
+    for (let i = 0; i < Math.min(parts.length, 3); i++) {
+      const rest = parts.slice(i).join(', ');
+      if (AREAS[rest]) return { lat: AREAS[rest][0], lng: AREAS[rest][1] };
+      const q = /chennai|tamil nadu|india/i.test(rest) ? rest : rest + ', Chennai';
+      let r = await (await fetch(`${GEO}/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(q)}`)).json();
+      if (!r.length && i === 0) r = await (await fetch(`${GEO}/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(rest)}`)).json();
+      if (r.length) return { lat: +r[0].lat, lng: +r[0].lon };
+    }
+  } catch (e) { /* offline or busy: the map tap still works */ }
+  return null;
+}
+
+async function areaTyped() {
+  const text = document.getElementById('areaInput').value.trim();
+  if (!text || text === E.siteText) return;
+  E.siteText = text;
+  const p = await findSite(text);
+  if (p && document.getElementById('areaInput').value.trim() === text) setSite(p);
+  else if (!p && navigator.onLine) showToast(t('siteNotFound'));
+}
+
 function useMyPlace() {
-  locate((ok) => {
+  locate(async (ok) => {
     if (!ok) return showToast(t('noLocation'));
-    if (E.map) E.map.setView([App.here.lat, App.here.lng], 14);
-    const near = Object.entries(AREAS)
-      .map(([name, p]) => ({ name, km: distanceKm(App.here, { lat: p[0], lng: p[1] }) }))
-      .sort((a, b) => a.km - b.km)[0];
-    document.getElementById('areaInput').value = near && near.km < 3 ? near.name : '📍';
-    E.usedGps = true;
+    await pinMoved({ ...App.here });
   });
 }
 
-function placeFor(area) {
-  if (E.usedGps) return App.here;
-  const spot = AREAS[area];
-  return spot ? { lat: spot[0], lng: spot[1] } : App.here;
+async function placeFor(area) {
+  if (E.site && area === E.siteText) return E.site;
+  const p = await findSite(area);
+  return p || E.site || App.here;
 }
 
 async function bookWorker() {
@@ -272,7 +347,7 @@ async function bookWorker() {
   }
   const job = currentJob();
   const wage = estimateWage(job);
-  const place = placeFor(area);
+  const place = await placeFor(area);
   const row = {
     employer_id: E.me.id,
     type: job.type,
@@ -842,6 +917,7 @@ function retryBooking(toEveryone) {
   E.type = b.type; E.hours = b.hours; E.load = b.load; E.risky = b.risky;
   E.preferred = toEveryone ? null : E.workers.find((w) => w.id === b.preferred_worker_id) || null;
   document.getElementById('areaInput').value = b.area;
+  if (b.lat != null) setSite(b, b.area);
   syncForm();
   E.booking = null;
   renderBooking();
@@ -1074,6 +1150,7 @@ function bookAgain(i) {
   const b = E.records[i];
   E.type = b.type; E.hours = b.hours; E.load = b.load; E.risky = b.risky;
   document.getElementById('areaInput').value = b.area;
+  if (b.lat != null) setSite(b, b.area);
   E.preferred = E.workers.find((w) => w.id === b.worker.id) || b.worker;
   if (!E.preferred.online) pickWhen('later');
   show('book');
@@ -1139,6 +1216,11 @@ App.onSynced = () => refreshBooking();
 async function startApp() {
   show('book');
   if (!E.map) E.map = heroMap('heroMap');
+  if (E.map && !E.map.wbSiteTap) {
+    E.map.wbSiteTap = true;
+    E.map.on('click', (ev) => { if (!E.booking) pinMoved({ lat: ev.latlng.lat, lng: ev.latlng.lng }); });
+  }
+  document.getElementById('areaInput').onchange = areaTyped;
   document.getElementById('areaList').innerHTML = Object.keys(AREAS).map((a) => `<option value="${a}">`).join('');
   document.querySelectorAll('#loadSeg button').forEach((b) => b.addEventListener('click', () => pickLoad(b.dataset.load)));
   document.querySelectorAll('#whenSeg button').forEach((b) => b.addEventListener('click', () => pickWhen(b.dataset.when)));

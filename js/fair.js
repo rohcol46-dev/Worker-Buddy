@@ -549,3 +549,17 @@ async function newOtp(id) {
 Object.assign(T.en, { newOtp: 'New OTP', newOtpMade: (o) => `New OTP: ${o}. Tell it to the worker.` });
 Object.assign(T.ta, { newOtp: 'புதிய OTP', newOtpMade: (o) => `புதிய OTP: ${o}. வேலையாளிடம் சொல்லுங்கள்.` });
 Object.assign(T.hi, { newOtp: 'नया OTP', newOtpMade: (o) => `नया OTP: ${o}। मज़दूर को बताएँ।` });
+
+// Exact work site (any street or landmark, GPS, or a tap on the map)
+Object.assign(T.en, {
+  siteHint: '📌 Tap the map or drag the pin to the exact spot.',
+  siteNotFound: 'Could not find that place. Tap the map to set the spot.'
+});
+Object.assign(T.ta, {
+  siteHint: '📌 சரியான இடத்துக்கு வரைபடத்தைத் தட்டவும் அல்லது பின்னை இழுக்கவும்.',
+  siteNotFound: 'அந்த இடம் கிடைக்கவில்லை. வரைபடத்தைத் தட்டி இடத்தைக் குறிக்கவும்.'
+});
+Object.assign(T.hi, {
+  siteHint: '📌 सही जगह के लिए नक्शे पर टैप करें या पिन खींचें।',
+  siteNotFound: 'वह जगह नहीं मिली। नक्शे पर टैप करके जगह चुनें।'
+});

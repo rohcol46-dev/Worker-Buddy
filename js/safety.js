@@ -12,7 +12,7 @@ function distanceKm(a, b) {
 
 // "3.2 km · ~₹10 bus" from where the worker is to the job's area
 function distanceText(job) {
-  const spot = AREAS[job.area];
+  const spot = job.lat != null ? [job.lat, job.lng] : AREAS[job.area];
   if (!spot) return t('distanceUnknown');
   const km = distanceKm(App.here, { lat: spot[0], lng: spot[1] });
   if (km < 0.5) return t('nearby');

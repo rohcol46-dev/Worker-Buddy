@@ -64,14 +64,54 @@ const GEAR = {
 // ---------- Places (Chennai demo). Change to your own city. ----------
 const WORK_SITE = { lat: 13.0067, lng: 80.2206 }; // Guindy
 
+// Localities offered while typing. Anything else typed (a street, a building, a landmark)
+// is looked up on OpenStreetMap, and the employer can also tap the map for the exact spot.
 const AREAS = {
-  'Guindy': [13.0067, 80.2206],
-  'T. Nagar': [13.0418, 80.2341],
-  'Adyar': [13.0012, 80.2565],
-  'Saidapet': [13.0213, 80.2231],
-  'Velachery': [12.9791, 80.2209],
-  'Ashok Nagar': [13.0350, 80.2120],
-  'Koyambedu': [13.0694, 80.1948]
+  // South
+  'Guindy': [13.0067, 80.2206], 'Guindy Industrial Estate': [13.0108, 80.2128], 'Little Mount': [13.0153, 80.2240],
+  'Saidapet': [13.0213, 80.2231], 'Saidapet West': [13.0236, 80.2154], 'Jafferkhanpet': [13.0297, 80.2072],
+  'West Mambalam': [13.0383, 80.2209], 'K.K. Nagar': [13.0410, 80.1990], 'M.G.R. Nagar': [13.0370, 80.1855],
+  'Ashok Nagar': [13.0350, 80.2120], 'Kodambakkam': [13.0521, 80.2255], 'Vadapalani': [13.0500, 80.2121],
+  'Virugambakkam': [13.0532, 80.1947], 'Saligramam': [13.0545, 80.2022], 'Valasaravakkam': [13.0405, 80.1723],
+  'Porur': [13.0382, 80.1565], 'Ramapuram': [13.0317, 80.1817], 'Nesapakkam': [13.0381, 80.1913],
+  'Alandur': [13.0035, 80.2006], 'St. Thomas Mount': [12.9951, 80.1960], 'Nanganallur': [12.9806, 80.1883],
+  'Adambakkam': [12.9886, 80.2045], 'Meenambakkam': [12.9872, 80.1767], 'Pallavaram': [12.9675, 80.1491],
+  'Chromepet': [12.9516, 80.1462], 'Tambaram': [12.9249, 80.1000], 'East Tambaram': [12.9246, 80.1311],
+  'Selaiyur': [12.9171, 80.1393], 'Medavakkam': [12.9171, 80.1923], 'Madipakkam': [12.9647, 80.1961],
+  'Keelkattalai': [12.9572, 80.1866], 'Pallikaranai': [12.9349, 80.2137], 'Velachery': [12.9791, 80.2209],
+  'Velachery Vijayanagar': [12.9756, 80.2162], 'Taramani': [12.9863, 80.2432], 'Kotturpuram': [13.0187, 80.2427],
+  'Adyar': [13.0012, 80.2565], 'Gandhi Nagar (Adyar)': [13.0056, 80.2560], 'Kasturba Nagar (Adyar)': [13.0003, 80.2509],
+  'Indira Nagar (Adyar)': [12.9935, 80.2537], 'Shastri Nagar (Adyar)': [12.9996, 80.2640], 'Besant Nagar': [12.9990, 80.2668],
+  'Thiruvanmiyur': [12.9830, 80.2594], 'Kottivakkam': [12.9680, 80.2590], 'Palavakkam': [12.9585, 80.2570],
+  'Neelankarai': [12.9488, 80.2585], 'Injambakkam': [12.9170, 80.2490], 'Perungudi': [12.9654, 80.2461],
+  'Thoraipakkam': [12.9400, 80.2340], 'Karapakkam': [12.9180, 80.2290], 'Sholinganallur': [12.9010, 80.2279],
+  'Semmancheri': [12.8735, 80.2245], 'Navalur': [12.8459, 80.2265], 'Siruseri': [12.8256, 80.2200],
+  'Kelambakkam': [12.7880, 80.2190],
+  // Central
+  'T. Nagar': [13.0418, 80.2341], 'Pondy Bazaar': [13.0410, 80.2399], 'Nandanam': [13.0300, 80.2400],
+  'Teynampet': [13.0450, 80.2510], 'Alwarpet': [13.0337, 80.2539], 'Mylapore': [13.0339, 80.2697],
+  'Mandaveli': [13.0272, 80.2618], 'R.A. Puram': [13.0263, 80.2543], 'Santhome': [13.0330, 80.2787],
+  'Royapettah': [13.0540, 80.2640], 'Gopalapuram': [13.0500, 80.2560], 'Thousand Lights': [13.0580, 80.2530],
+  'Nungambakkam': [13.0569, 80.2425], 'Chetpet': [13.0720, 80.2410], 'Egmore': [13.0732, 80.2609],
+  'Triplicane': [13.0587, 80.2756], 'Chintadripet': [13.0730, 80.2720], 'Mount Road (Anna Salai)': [13.0600, 80.2630],
+  'Park Town': [13.0780, 80.2730], 'George Town': [13.0915, 80.2865], 'Parrys': [13.0900, 80.2880],
+  'Sowcarpet': [13.0930, 80.2800], 'Vepery': [13.0840, 80.2600], 'Purasawalkam': [13.0880, 80.2550],
+  'Kilpauk': [13.0827, 80.2420], 'Aminjikarai': [13.0730, 80.2240], 'Shenoy Nagar': [13.0780, 80.2290],
+  'Anna Nagar': [13.0850, 80.2101], 'Anna Nagar West': [13.0890, 80.2000], 'Anna Nagar East': [13.0870, 80.2210],
+  'Arumbakkam': [13.0720, 80.2100], 'Choolaimedu': [13.0640, 80.2270], 'Vadapalani Bus Depot': [13.0520, 80.2120],
+  'Koyambedu': [13.0694, 80.1948], 'Koyambedu Market': [13.0726, 80.1943], 'Maduravoyal': [13.0650, 80.1700],
+  'Thirumangalam': [13.0850, 80.1990], 'Mogappair': [13.0840, 80.1750], 'Mogappair West': [13.0870, 80.1650],
+  // North and west
+  'Perambur': [13.1180, 80.2330], 'Kolathur': [13.1240, 80.2120], 'Villivakkam': [13.1080, 80.2090],
+  'Padi': [13.0980, 80.1880], 'Ambattur': [13.1143, 80.1548], 'Ambattur Industrial Estate': [13.0990, 80.1640],
+  'Avadi': [13.1147, 80.1018], 'Thirumullaivoyal': [13.1290, 80.1350], 'Korattur': [13.1080, 80.1840],
+  'Madhavaram': [13.1480, 80.2310], 'Kodungaiyur': [13.1370, 80.2470], 'Vyasarpadi': [13.1170, 80.2560],
+  'Tondiarpet': [13.1260, 80.2880], 'Royapuram': [13.1137, 80.2954], 'Washermanpet': [13.1140, 80.2850],
+  'Tiruvottiyur': [13.1600, 80.3000], 'Ennore': [13.2140, 80.3200], 'Manali': [13.1660, 80.2600],
+  'Red Hills': [13.1950, 80.1850], 'Puzhal': [13.1600, 80.2050],
+  'Poonamallee': [13.0473, 80.0945], 'Iyyappanthangal': [13.0390, 80.1360], 'Mangadu': [13.0270, 80.1100],
+  'Kundrathur': [12.9970, 80.0970], 'Vanagaram': [13.0590, 80.1520], 'Thiruverkadu': [13.0730, 80.1260],
+  'Perungalathur': [12.9050, 80.0900], 'Vandalur': [12.8920, 80.0810], 'Guduvanchery': [12.8450, 80.0600]
 };
 
 // Rest points placed by hand near the work site. Replace with real spots you know.
@@ -212,7 +252,7 @@ const T = {
     yourName: 'Your name or shop',
     yourNamePh: 'e.g. Kumar Stores',
     workType: 'Work type',
-    area: 'Area', areaPh: 'e.g. Guindy',
+    area: 'Area', areaPh: 'Street, area or landmark',
     date: 'Date', hours: 'Hours', load: 'Load / effort',
     light: 'Light', medium: 'Medium', heavy: 'Heavy',
     risky: 'Risky work (height, electric, sewer)',
@@ -353,7 +393,7 @@ const T = {
     yourName: 'உங்கள் பெயர் அல்லது கடை',
     yourNamePh: 'எ.கா. குமார் ஸ்டோர்ஸ்',
     workType: 'வேலை வகை',
-    area: 'இடம்', areaPh: 'எ.கா. கிண்டி',
+    area: 'இடம்', areaPh: 'தெரு, பகுதி அல்லது அடையாளம்',
     date: 'தேதி', hours: 'மணி நேரம்', load: 'சுமை / உழைப்பு',
     light: 'குறைவு', medium: 'நடுத்தரம்', heavy: 'அதிகம்',
     risky: 'ஆபத்தான வேலை (உயரம், மின்சாரம், சாக்கடை)',
