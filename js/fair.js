@@ -609,31 +609,161 @@ Object.assign(T.hi, {
   siteNotFound: 'वह जगह नहीं मिली। नक्शे पर टैप करके जगह चुनें।'
 });
 
-// Closing a job without payment
+// ---------- Cancel a job, always with a reason (like Rapido) ----------
+// One box for both apps and every stage. The reason is saved as a key (shown to the other side
+// in their own language) or as the words typed under "Other".
+const CANCEL_REASONS = {
+  worker_before: ['crLate', 'crSick', 'crFar', 'crAskedToCancel', 'crWorkDifferent', 'crTesting'],
+  worker_after: ['crWorkDifferent', 'crUnsafe', 'crLetGo', 'crAskedToCancel', 'crTesting'],
+  employer_before: ['crPlans', 'crWorkerLate', 'crFoundOther', 'crMistake', 'crTesting'],
+  employer_after: ['crNotDone', 'crWorkerLeft', 'crPlans', 'crTesting']
+};
+const Cancel = { done: null };
+
+function reasonText(note) {
+  return note && T.en[note] ? t(note) : (note || '');
+}
+
+function askCancel(side, started, warn, done) {
+  Cancel.done = done;
+  let m = document.getElementById('cancelModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'cancelModal';
+    m.className = 'modal';
+    m.innerHTML = '<div class="modal-box"><div id="cancelBody"></div></div>';
+    m.addEventListener('click', (e) => { if (e.target === m) closeModal('cancelModal'); });
+    document.body.appendChild(m);
+  }
+  const keys = CANCEL_REASONS[`${side}_${started ? 'after' : 'before'}`];
+  document.getElementById('cancelBody').innerHTML = `
+    <h3>${t('cancelWhy')}</h3>
+    <form id="cancelForm" class="cancel-reasons" onsubmit="event.preventDefault(); sendCancel(this)">
+      ${keys.map((k) => `<label class="check"><input type="radio" name="why" value="${k}" required> <span>${t(k)}</span></label>`).join('')}
+      <label class="check"><input type="radio" name="why" value="other"> <span>${t('crOther')}</span></label>
+      <input name="other" class="input" maxlength="120" placeholder="${attr(t('crOtherPh'))}" hidden>
+      ${warn ? `<p class="dispute-note small">${warn}</p>` : ''}
+      <button class="btn btn-danger btn-block btn-big" type="submit">${t('cancelJobBtn')}</button>
+      <button class="btn btn-light btn-block" type="button" onclick="closeModal('cancelModal')">${t('keepJob')}</button>
+    </form>`;
+  const f = document.getElementById('cancelForm');
+  f.addEventListener('change', () => {
+    f.other.hidden = f.why.value !== 'other';
+    f.other.required = f.why.value === 'other';
+    if (!f.other.hidden) f.other.focus();
+  });
+  m.classList.add('open');
+}
+
+async function sendCancel(f) {
+  const note = f.why.value === 'other' ? f.other.value.trim() : f.why.value;
+  if (!note) return showToast(t('crPick'));
+  const btn = f.querySelector('button[type=submit]');
+  btn.disabled = true;
+  try {
+    await Cancel.done(note);
+    closeModal('cancelModal');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// "Cancelled by the worker: Not feeling well" for the other side
+function cancelLine(b) {
+  if (!b || !b.cancel_note) return '';
+  return tf(b.cancelled_by === 'worker' ? 'cancelledByWorker' : 'cancelledByEmployer', reasonText(b.cancel_note));
+}
+
 Object.assign(T.en, {
-  closeUnpaidBtn: 'Close this job without paying',
-  closeUnpaidWarn: 'Close this job without paying? Only do this for a test job or if the work was not done. It counts as an unpaid job and lowers your Fair Pay Score, and the worker can use it as proof in a complaint.',
-  workerCloseBtn: 'Close this job (no payment)',
-  workerCloseWarn: 'Close this job without getting paid? Do this only for a test job, or if you agree to let it go.',
-  closedUnpaid: 'Job closed. No payment recorded.',
+  cancelWhy: 'Why are you cancelling?',
+  cancelJobBtn: 'Cancel job',
+  keepJob: 'Keep the job',
+  crPick: 'Pick a reason.',
+  crOther: 'Other reason',
+  crOtherPh: 'Type the reason',
+  crLate: 'I can’t reach on time',
+  crSick: 'Emergency or not feeling well',
+  crFar: 'The place is too far',
+  crAskedToCancel: 'The other person asked me to cancel',
+  crWorkDifferent: 'The work is different from what was posted',
+  crUnsafe: 'The site is not safe',
+  crLetGo: 'I don’t want payment for this',
+  crTesting: 'Just testing the app',
+  crPlans: 'My plans changed',
+  crWorkerLate: 'The worker is late or not reachable',
+  crFoundOther: 'I found someone else',
+  crMistake: 'Posted by mistake',
+  crNotDone: 'The work was not done',
+  crWorkerLeft: 'The worker left before finishing',
+  cancelledByWorker: (r) => `Cancelled by the worker: ${r}`,
+  cancelledByEmployer: (r) => `Cancelled by the employer: ${r}`,
+  cancelDone: 'Job cancelled.',
   workerClosedNote: 'The worker closed this job with no payment. Nothing is owed.',
-  employerClosedUnpaid: '⚠️ The employer closed this job without paying. It is saved as proof, and their Fair Pay Score went down. Free legal help: 15100.'
+  workerCancelBefore: 'The employer will be sent another worker.',
+  workerCancelAfter: 'The job closes with no payment.',
+  empCancelShowup: 'The worker is already on the way, so ₹100 show-up pay is owed to them.',
+  empCancelAfter: 'Work has started. Cancelling counts as an unpaid job and lowers your Fair Pay Score, and the worker can use it as proof in a complaint.',
+  employerClosedUnpaid: '⚠️ The employer cancelled after the work started, without paying. It is saved as proof, and their Fair Pay Score went down. Free legal help: 15100.'
 });
 Object.assign(T.ta, {
-  closeUnpaidBtn: 'பணம் செலுத்தாமல் இந்த வேலையை மூடு',
-  closeUnpaidWarn: 'பணம் செலுத்தாமல் இந்த வேலையை மூடவா? சோதனை வேலை அல்லது வேலை நடக்கவில்லை என்றால் மட்டும் செய்யுங்கள். இது செலுத்தாத வேலையாகக் கணக்கிடப்பட்டு உங்கள் Fair Pay மதிப்பெண் குறையும்; வேலையாள் இதைப் புகாருக்குச் சான்றாகப் பயன்படுத்தலாம்.',
-  workerCloseBtn: 'இந்த வேலையை மூடு (பணம் இல்லை)',
-  workerCloseWarn: 'கூலி பெறாமல் இந்த வேலையை மூடவா? சோதனை வேலை அல்லது நீங்கள் விட்டுவிட ஒப்புக்கொண்டால் மட்டும்.',
-  closedUnpaid: 'வேலை மூடப்பட்டது. கட்டணம் பதிவாகவில்லை.',
+  cancelWhy: 'ஏன் ரத்து செய்கிறீர்கள்?',
+  cancelJobBtn: 'வேலையை ரத்து செய்',
+  keepJob: 'வேலையை வைத்திரு',
+  crPick: 'ஒரு காரணத்தைத் தேர்ந்தெடுக்கவும்.',
+  crOther: 'வேறு காரணம்',
+  crOtherPh: 'காரணத்தை டைப் செய்யவும்',
+  crLate: 'நேரத்துக்கு வர முடியாது',
+  crSick: 'அவசரம் அல்லது உடல்நலம் சரியில்லை',
+  crFar: 'இடம் மிகத் தொலைவில் உள்ளது',
+  crAskedToCancel: 'மற்றவர் ரத்து செய்யச் சொன்னார்',
+  crWorkDifferent: 'பதிவிட்டதிலிருந்து வேலை வேறாக உள்ளது',
+  crUnsafe: 'வேலை இடம் பாதுகாப்பாக இல்லை',
+  crLetGo: 'இதற்குப் பணம் வேண்டாம்',
+  crTesting: 'ஆப்பைச் சோதிக்கிறேன்',
+  crPlans: 'என் திட்டம் மாறிவிட்டது',
+  crWorkerLate: 'வேலையாள் தாமதம் அல்லது தொடர்பில் இல்லை',
+  crFoundOther: 'வேறு ஒருவரைக் கண்டுபிடித்தேன்',
+  crMistake: 'தவறாகப் பதிவிட்டேன்',
+  crNotDone: 'வேலை செய்யப்படவில்லை',
+  crWorkerLeft: 'வேலையாள் முடிக்காமல் சென்றார்',
+  cancelledByWorker: (r) => `வேலையாள் ரத்து செய்தார்: ${r}`,
+  cancelledByEmployer: (r) => `முதலாளி ரத்து செய்தார்: ${r}`,
+  cancelDone: 'வேலை ரத்து செய்யப்பட்டது.',
   workerClosedNote: 'வேலையாள் இந்த வேலையைப் பணம் இல்லாமல் மூடினார். எதுவும் தர வேண்டியதில்லை.',
-  employerClosedUnpaid: '⚠️ முதலாளி பணம் செலுத்தாமல் வேலையை மூடினார். இது சான்றாகச் சேமிக்கப்பட்டது; அவரது Fair Pay மதிப்பெண் குறைந்தது. இலவச சட்ட உதவி: 15100.'
+  workerCancelBefore: 'முதலாளிக்கு வேறு வேலையாள் அனுப்பப்படுவார்.',
+  workerCancelAfter: 'பணம் இல்லாமல் வேலை மூடப்படும்.',
+  empCancelShowup: 'வேலையாள் ஏற்கனவே வருகிறார், எனவே ₹100 வருகைக் கூலி தர வேண்டும்.',
+  empCancelAfter: 'வேலை தொடங்கிவிட்டது. ரத்து செய்தால் செலுத்தாத வேலையாகக் கணக்கிடப்பட்டு Fair Pay மதிப்பெண் குறையும்; வேலையாள் இதைச் சான்றாகப் பயன்படுத்தலாம்.',
+  employerClosedUnpaid: '⚠️ வேலை தொடங்கிய பின் முதலாளி பணம் செலுத்தாமல் ரத்து செய்தார். இது சான்றாகச் சேமிக்கப்பட்டது; அவரது Fair Pay மதிப்பெண் குறைந்தது. இலவச சட்ட உதவி: 15100.'
 });
 Object.assign(T.hi, {
-  closeUnpaidBtn: 'भुगतान किए बिना यह काम बंद करें',
-  closeUnpaidWarn: 'भुगतान किए बिना यह काम बंद करें? केवल टेस्ट काम के लिए या अगर काम नहीं हुआ। यह बिना भुगतान वाला काम गिना जाएगा और आपका Fair Pay स्कोर घटेगा; मज़दूर इसे शिकायत में सबूत की तरह इस्तेमाल कर सकता है।',
-  workerCloseBtn: 'यह काम बंद करें (कोई भुगतान नहीं)',
-  workerCloseWarn: 'बिना पैसे लिए यह काम बंद करें? केवल टेस्ट काम के लिए या अगर आप छोड़ने को तैयार हैं।',
-  closedUnpaid: 'काम बंद हुआ। कोई भुगतान दर्ज नहीं।',
+  cancelWhy: 'आप क्यों रद्द कर रहे हैं?',
+  cancelJobBtn: 'काम रद्द करें',
+  keepJob: 'काम रखें',
+  crPick: 'एक कारण चुनें।',
+  crOther: 'कोई और कारण',
+  crOtherPh: 'कारण लिखें',
+  crLate: 'समय पर नहीं पहुँच सकता',
+  crSick: 'आपात स्थिति या तबीयत ठीक नहीं',
+  crFar: 'जगह बहुत दूर है',
+  crAskedToCancel: 'दूसरे व्यक्ति ने रद्द करने को कहा',
+  crWorkDifferent: 'काम पोस्ट किए गए काम से अलग है',
+  crUnsafe: 'काम की जगह सुरक्षित नहीं है',
+  crLetGo: 'मुझे इसका पैसा नहीं चाहिए',
+  crTesting: 'बस ऐप टेस्ट कर रहा हूँ',
+  crPlans: 'मेरी योजना बदल गई',
+  crWorkerLate: 'मज़दूर देर कर रहा है या संपर्क में नहीं',
+  crFoundOther: 'मुझे कोई और मिल गया',
+  crMistake: 'गलती से पोस्ट हुआ',
+  crNotDone: 'काम नहीं हुआ',
+  crWorkerLeft: 'मज़दूर काम पूरा किए बिना चला गया',
+  cancelledByWorker: (r) => `मज़दूर ने रद्द किया: ${r}`,
+  cancelledByEmployer: (r) => `मालिक ने रद्द किया: ${r}`,
+  cancelDone: 'काम रद्द हुआ।',
   workerClosedNote: 'मज़दूर ने यह काम बिना भुगतान के बंद किया। कुछ देना बाकी नहीं।',
-  employerClosedUnpaid: '⚠️ मालिक ने बिना भुगतान के काम बंद किया। यह सबूत के रूप में सहेजा गया है और उनका Fair Pay स्कोर घटा। मुफ़्त कानूनी मदद: 15100.'
+  workerCancelBefore: 'मालिक को दूसरा मज़दूर भेजा जाएगा।',
+  workerCancelAfter: 'काम बिना भुगतान के बंद होगा।',
+  empCancelShowup: 'मज़दूर पहले से रास्ते में है, इसलिए ₹100 आने का पैसा देना होगा।',
+  empCancelAfter: 'काम शुरू हो चुका है। रद्द करना बिना भुगतान वाला काम गिना जाएगा और आपका Fair Pay स्कोर घटेगा; मज़दूर इसे सबूत की तरह इस्तेमाल कर सकता है।',
+  employerClosedUnpaid: '⚠️ काम शुरू होने के बाद मालिक ने बिना भुगतान के रद्द किया। यह सबूत के रूप में सहेजा गया है और उनका Fair Pay स्कोर घटा। मुफ़्त कानूनी मदद: 15100.'
 });

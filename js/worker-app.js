@@ -186,8 +186,9 @@ function onBookingChange(payload) {
   // My active job changed (employer paid, etc.)
   if (W.active && b.id === W.active.id && b.status === 'cancelled') {
     // The employer cancelled before work started
-    showToast(b.cancel_reason === 'employer_unpaid' ? t('employerClosedUnpaid')
-      : b.showup_pay ? t('showupForWorker') : `${statusLabel('cancelled')}: ${t(b.type)}, ${b.area}`);
+    const why = b.cancelled_by === 'employer' && b.cancel_note ? `\n${cancelLine(b)}` : '';
+    showToast((b.cancel_reason === 'employer_unpaid' ? t('employerClosedUnpaid')
+      : b.showup_pay ? t('showupForWorker') : `${statusLabel('cancelled')}: ${t(b.type)}, ${b.area}`) + why);
     W.active = null;
     W.employer = null;
     cacheState();
@@ -457,7 +458,7 @@ function renderActive() {
         <button class="btn btn-light btn-block" onclick="reportHeat(W.active.id)">${t('reportHeat')}</button>
         <div class="heat-help"></div>` : ''}
       <button class="btn btn-primary btn-block btn-big" onclick="completeWork()">${t('completeJob')}</button>
-      <button class="link-btn small close-unpaid" onclick="workerCloseUnpaid()">${t('workerCloseBtn')}</button>`;
+      <button class="link-btn small close-unpaid" onclick="cantCome()">${t('cancelJobBtn')}</button>`;
   } else if (b.status === 'completed') {
     speech = tf('waitingPayment', amount + approvedMaterials());
     action = `<p class="wait-pay"><span class="pulse-dot"></span>${tf('waitingPayment', amount + approvedMaterials())} ${speakButton(speech)}</p>
@@ -466,7 +467,7 @@ function renderActive() {
       ${b.rain_off ? `<p class="overtime">${tf('rainNote', amount)}</p>` : ''}
       ${W.me.upi_id ? `<button class="btn btn-upi btn-block btn-big" onclick="showUpiQR(W.active, W.me, amountOf(W.active) + approvedMaterials())">${tf('myUpiQrBtn', amount + approvedMaterials())}</button>`
         : `<p class="muted small">${t('noUpiYet')}</p>`}
-      <button class="link-btn small close-unpaid" onclick="workerCloseUnpaid()">${t('workerCloseBtn')}</button>`;
+      <button class="link-btn small close-unpaid" onclick="cantCome()">${t('cancelJobBtn')}</button>`;
   } else if (b.status === 'paid' && !b.worker_confirmed_at) {
     // Proof of pay: the worker has the final word
     speech = tf('employerSaysPaid', amount);
@@ -589,23 +590,18 @@ function sendMyLocation() {
 }
 
 // Can't come (Rapido captain cancel): the job goes back to other workers
-// The worker closes the job with no payment (a test job, or they let it go)
-async function workerCloseUnpaid() {
-  if (!confirm(t('workerCloseWarn'))) return;
-  const { data, error } = await db.rpc('close_unpaid', { p_booking: W.active.id, p_worker: W.me.id, p_employer: null });
-  if (error || !data) return showToast(t('saveError'));
-  showToast(t('closedUnpaid'));
-  W.active = null;
-  W.employer = null;
-  cacheState();
-  renderHome();
+// Cancel with a reason. Before starting, the job goes to other workers; after, it closes with no payment.
+function cantCome(id) {
+  const bookingId = id || W.active.id;
+  const b = W.active && W.active.id === bookingId ? W.active : { status: 'assigned' };
+  const started = ['started', 'completed'].includes(b.status);
+  askCancel('worker', started, t(started ? 'workerCancelAfter' : 'workerCancelBefore'), (note) => workerCancel(bookingId, note));
 }
 
-async function cantCome(id) {
-  if (!confirm(t('cantComeConfirm'))) return;
-  const bookingId = id || W.active.id;
-  const { data, error } = await db.rpc('worker_cancel', { p_booking: bookingId, p_worker: W.me.id });
-  if (error || !data) return showToast(t('saveError'));
+async function workerCancel(bookingId, note) {
+  const { data, error } = await db.rpc('cancel_job', { p_booking: bookingId, p_worker: W.me.id, p_employer: null, p_note: note });
+  if (error || !['reposted', 'closed'].includes(data)) return showToast(t('saveError'));
+  showToast(t('cancelDone'));
   W.declined.add(bookingId);
   if (W.active && W.active.id === bookingId) {
     W.active = null;

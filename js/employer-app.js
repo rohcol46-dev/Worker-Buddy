@@ -503,7 +503,7 @@ function renderBooking() {
       <div class="searching">
         <div class="job-icon">${WORK_TYPES[b.type].icon}</div>
         <h2>${tf('searchingFor', t(b.type))}</h2>
-        ${b.cancel_reason === 'worker_cancelled' ? `<p class="dispute-note">${t('prevWorkerCancelled')}</p>` : ''}
+        ${b.cancel_reason === 'worker_cancelled' ? `<p class="dispute-note">${t('prevWorkerCancelled')}${b.cancel_note ? `<br><small>${esc(cancelLine(b))}</small>` : ''}</p>` : ''}
         <p class="muted">${b.preferred_worker_id ? `🎯 ${tf('requestingOnly', esc(preferred ? preferred.name : t('worker')))}` : tf('requestSentTo', onlineOfType())}</p>
         ${b.scheduled_for ? `<p><b>${tf('scheduledFor', whenText(b))}</b><br><span class="muted small">${t('waitingAccept')}</span></p>`
           : '<div class="big-timer"><b id="searchClock">10:00</b></div>'}
@@ -512,7 +512,7 @@ function renderBooking() {
         ${reservedFor(b) ? `<p class="small">${t('favReserved')}</p>` : ''}
         <button class="btn btn-whatsapp btn-block btn-big" onclick="shareJob(E.booking, E.me.name)">${t('shareJobWa')}</button>
         <div class="offers">${offersHTML()}</div>
-        <button class="btn btn-light btn-block" onclick="cancelBooking()">${t('cancelBooking')}</button>
+        <button class="btn btn-light btn-block" onclick="employerCancel()">${t('cancelBooking')}</button>
       </div>`;
     const tick = () => {
       const left = (ends - Date.now()) / 1000;
@@ -532,6 +532,7 @@ function renderBooking() {
         <div class="job-icon">😕</div>
         <h2>${b.status === 'expired' ? t('noWorkerFound') : statusLabel(b.status)}</h2>
         ${b.cancel_reason === 'closed_by_worker' ? `<p class="muted">${t('workerClosedNote')}</p>` : ''}
+        ${b.cancelled_by === 'worker' && b.cancel_note ? `<p class="dispute-note">${esc(cancelLine(b))}</p>` : ''}
         ${b.preferred_worker_id ? `<button class="btn btn-primary btn-block btn-big" onclick="retryBooking(true)">${t('sendToAllBtn')}</button>`
           : `<button class="btn btn-primary btn-block btn-big" onclick="retryBooking()">${t('tryAgain')}</button>`}
         <button class="btn btn-light btn-block" onclick="newBooking()">${t('bookAgain')}</button>
@@ -548,13 +549,13 @@ function renderBooking() {
       <p id="etaLine" class="eta"></p>
       <div class="otp-show"><small>${t('shareOtp')}</small><b>${otpOf(b).split('').join(' ')}</b>
         <button class="link-btn small otp-new" onclick="newOtp('${b.id}')">🔄 ${t('newOtp')}</button></div>
-      <button class="btn btn-light btn-block" onclick="cancelAssigned()">${t('cancelJob')}</button>`;
+      <button class="btn btn-light btn-block" onclick="employerCancel()">${t('cancelJob')}</button>`;
   } else if (b.status === 'started') {
     action = `<div class="big-timer"><small>${t('workInProgress')}</small><b id="workClock">0:00</b></div>
       <p id="overtimeLine" class="overtime" hidden></p>
       ${App.isHot ? `<p class="heat-work">${t('heatEmployerNote')}</p>` : ''}
       <button class="btn btn-light btn-block" onclick="rainStop()">${t('rainStop')}</button>
-      <button class="link-btn small close-unpaid" onclick="closeUnpaid()">${t('closeUnpaidBtn')}</button>`;
+      <button class="link-btn small close-unpaid" onclick="employerCancel()">${t('cancelJobBtn')}</button>`;
   } else if (b.status === 'completed') {
     action = `
       <div class="agreement">
@@ -573,7 +574,7 @@ function renderBooking() {
       ${b.effort_status === 'pending' ? `<p class="dispute-note">${t('effortPayFirst')}</p>` : `
       ${upiPayHTML(b, E.worker, amount + E.tip + approvedMaterials())}
       <button class="btn btn-accept btn-block btn-big" onclick="payWorker()">${tf('payNow', amount + E.tip + approvedMaterials())}</button>`}
-      <button class="link-btn small close-unpaid" onclick="closeUnpaid()">${t('closeUnpaidBtn')}</button>`;
+      <button class="link-btn small close-unpaid" onclick="employerCancel()">${t('cancelJobBtn')}</button>`;
   } else if (b.status === 'paid' && b.worker_confirmed_at) {
     action = `<p class="paid-ok">✅ ${t('slipConfirmed')}${b.tip ? ` · 🙏 ${t('tipLabel')} ₹${b.tip}` : ''}</p>
       <button class="btn btn-dark btn-block" onclick="openSlip(E.booking, E.me, E.worker)">${t('viewSlip')}</button>`;
@@ -858,20 +859,17 @@ function setTip(n) {
   renderBooking();
 }
 
-// No payment (for example a test job): the job closes, and counts as not paid on the Fair Pay Score
-async function closeUnpaid() {
-  if (!confirm(t('closeUnpaidWarn'))) return;
-  const { data, error } = await db.rpc('close_unpaid', { p_booking: E.booking.id, p_worker: null, p_employer: E.me.id });
-  if (error || !data) return showToast(t('saveError'));
-  showToast(t('closedUnpaid'));
-  await loadMe();
-  newBooking();
-}
-
-async function cancelAssigned() {
-  if (!confirm(t('cancelAssignedWarn'))) return;
-  await db.rpc('cancel_booking', { p_booking: E.booking.id, p_employer: E.me.id, p_reason: 'employer_cancelled' });
-  newBooking();
+// Cancel at any stage, with a reason. After the work started it counts as unpaid on the Fair Pay Score.
+function employerCancel(b = E.booking, after = newBooking) {
+  const started = ['started', 'completed'].includes(b.status);
+  const warn = started ? t('empCancelAfter') : b.status === 'assigned' && !b.scheduled_for ? t('empCancelShowup') : '';
+  askCancel('employer', started, warn, async (note) => {
+    const { data, error } = await db.rpc('cancel_job', { p_booking: b.id, p_worker: null, p_employer: E.me.id, p_note: note });
+    if (error || !['cancelled', 'showup', 'unpaid'].includes(data)) return showToast(t('saveError'));
+    showToast(t('cancelDone'));
+    if (data === 'unpaid') await loadMe();
+    after();
+  });
 }
 
 async function onBookingChange(payload) {
@@ -917,12 +915,6 @@ async function expireBooking() {
   clearInterval(E.searchTimer);
   await db.rpc('cancel_booking', { p_booking: E.booking.id, p_employer: E.me.id, p_reason: 'expired' });
   await refreshBooking();
-}
-
-async function cancelBooking() {
-  await db.rpc('cancel_booking', { p_booking: E.booking.id, p_employer: E.me.id, p_reason: 'cancelled' });
-  E.booking = null;
-  renderBooking();
 }
 
 async function refreshBooking() {
@@ -1049,6 +1041,7 @@ async function renderBookings() {
     else if (b.status === 'paid') label = t('awaitingConfirm');
     const upcoming = b.scheduled_for && ['searching', 'assigned'].includes(b.status);
     if (upcoming && b.status === 'searching') label = t('waitingAccept');
+    if (b.status === 'cancelled' && b.cancel_note) label += ` · ${esc(reasonText(b.cancel_note))}`;
     return `
     <div class="mini-card">
       <div>
@@ -1176,10 +1169,8 @@ function bookAgain(i) {
   syncForm();
 }
 
-async function cancelUpcoming(i) {
-  if (!confirm(t('cancelConfirm'))) return;
-  await db.rpc('cancel_booking', { p_booking: E.records[i].id, p_employer: E.me.id, p_reason: 'employer_cancelled' });
-  renderBookings();
+function cancelUpcoming(i) {
+  employerCancel(E.records[i], renderBookings);
 }
 
 // ---------- Start ----------
