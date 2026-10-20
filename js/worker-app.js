@@ -455,6 +455,8 @@ function renderActive() {
       ${b.overtime_hours ? `<p class="overtime">${t('overtimeLabel')}: ${b.overtime_hours} h · +₹${80 * b.overtime_hours}</p>` : ''}
       ${b.travel_pay ? `<p class="small">${tf('travelTag', b.travel_pay)}</p>` : ''}
       ${b.rain_off ? `<p class="overtime">${tf('rainNote', amount)}</p>` : ''}
+      ${W.me.upi_id ? `<button class="btn btn-upi btn-block btn-big" onclick="showUpiQR(W.active, W.me, amountOf(W.active) + approvedMaterials())">${tf('myUpiQrBtn', amount + approvedMaterials())}</button>`
+        : `<p class="muted small">${t('noUpiYet')}</p>`}
       <button class="btn btn-dark btn-block" onclick="scanQR()">${t('qrScanBtn')}</button>`;
   } else if (b.status === 'paid' && !b.worker_confirmed_at) {
     // Proof of pay: the worker has the final word
@@ -652,6 +654,7 @@ function scanQR() {
     closeQR();
     let p = null;
     try { p = JSON.parse(text); } catch (e) { /* not ours */ }
+    if (/^upi:/i.test(text)) return showToast(t('qrIsUpi'));
     const b = W.active;
     if (!b || !p || p.wb !== 1 || !p.a || (p.b && p.b !== b.id)) return showToast(t('qrWrong'));
     const otp = Store.get('otp_' + b.id, null);

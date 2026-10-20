@@ -274,9 +274,9 @@ Object.assign(T.en, {
   cancelAssignedWarn: 'The worker has already set off. Cancelling now means ₹100 show-up pay for them. Cancel?',
   showupForWorker: 'The employer cancelled after you set off. You are owed ₹100 show-up pay.',
   showupLabel: 'Show-up pay',
-  qrPayBtn: '📱 Pay with QR (works offline)',
+  qrPayBtn: '🧾 Show pay-proof QR (after paying, works offline)',
   qrPayTitle: 'Show this to the worker',
-  qrPayHint: 'The worker scans this after you pay cash or UPI. It records the payment as proof, even with no internet.',
+  qrPayHint: 'This is not a payment QR. After you pay by cash or UPI, the worker scans it inside Worker Buddy to record the payment, even with no internet.',
   qrBackup: 'Code',
   qrNoLib: 'QR could not load. Tell the worker the code below.',
   qrScanBtn: '📷 Scan the employer’s pay QR',
@@ -318,9 +318,9 @@ Object.assign(T.ta, {
   cancelAssignedWarn: 'வேலையாள் ஏற்கனவே கிளம்பிவிட்டார். இப்போது ரத்து செய்தால் அவருக்கு ₹100 வருகைக் கூலி. ரத்து செய்யவா?',
   showupForWorker: 'நீங்கள் கிளம்பிய பிறகு முதலாளி ரத்து செய்தார். உங்களுக்கு ₹100 வருகைக் கூலி வர வேண்டும்.',
   showupLabel: 'வருகைக் கூலி',
-  qrPayBtn: '📱 QR மூலம் கொடு (இணையம் இல்லாமலும்)',
+  qrPayBtn: '🧾 கட்டணச் சான்று QR காட்டு (செலுத்திய பின், இணையம் இல்லாமலும்)',
   qrPayTitle: 'இதை வேலையாளிடம் காட்டுங்கள்',
-  qrPayHint: 'பணம் அல்லது UPI கொடுத்த பின் வேலையாள் இதை ஸ்கேன் செய்வார். இணையம் இல்லாவிட்டாலும் கட்டணச் சான்றாகப் பதிவாகும்.',
+  qrPayHint: 'இது கட்டணம் செலுத்தும் QR அல்ல. பணம் அல்லது UPI கொடுத்த பின் வேலையாள் இதை Worker Buddy-யில் ஸ்கேன் செய்வார். இணையம் இல்லாவிட்டாலும் சான்றாகப் பதிவாகும்.',
   qrBackup: 'குறியீடு',
   qrNoLib: 'QR ஏற்றப்படவில்லை. கீழே உள்ள குறியீட்டை வேலையாளிடம் சொல்லுங்கள்.',
   qrScanBtn: '📷 முதலாளியின் கட்டண QR ஐ ஸ்கேன் செய்',
@@ -362,9 +362,9 @@ Object.assign(T.hi, {
   cancelAssignedWarn: 'मज़दूर निकल चुका है। अभी रद्द करने पर उसे ₹100 आने का पैसा मिलेगा। रद्द करें?',
   showupForWorker: 'आपके निकलने के बाद मालिक ने रद्द किया। आपको ₹100 आने का पैसा मिलना है।',
   showupLabel: 'आने का पैसा',
-  qrPayBtn: '📱 QR से भुगतान (बिना इंटरनेट भी)',
+  qrPayBtn: '🧾 भुगतान-सबूत QR दिखाएँ (भुगतान के बाद, बिना इंटरनेट भी)',
   qrPayTitle: 'यह मज़दूर को दिखाएँ',
-  qrPayHint: 'नकद या UPI देने के बाद मज़दूर इसे स्कैन करेगा। बिना इंटरनेट के भी भुगतान का सबूत बनता है।',
+  qrPayHint: 'यह भुगतान वाला QR नहीं है। नकद या UPI देने के बाद मज़दूर इसे Worker Buddy में स्कैन करेगा। बिना इंटरनेट के भी सबूत बनता है।',
   qrBackup: 'कोड',
   qrNoLib: 'QR नहीं खुला। मज़दूर को नीचे का कोड बताएँ।',
   qrScanBtn: '📷 मालिक का भुगतान QR स्कैन करें',
@@ -463,35 +463,80 @@ Object.assign(T.hi, { ruleNight: 'रात का काम (रात 8 – �
 // ---------- Pay through the employer's own UPI app (free, no payment gateway) ----------
 // Opens GPay / PhonePe / Paytm with the worker's UPI ID and the amount filled in.
 // The employer still taps "Pay and finish" after, and the worker confirms as before.
+// The standard UPI format (NPCI): GPay, PhonePe, Paytm, FamPay, BHIM and bank apps all read it,
+// as a link on the same phone or as a QR scanned from another phone.
+// Only pa / pn / am / cu / tn are used: merchant fields (mc, tr) make apps refuse personal UPI IDs.
 function upiLink(b, worker, amount) {
   if (!worker || !worker.upi_id) return '';
-  const q = new URLSearchParams({ pa: worker.upi_id, pn: worker.name || 'Worker', am: String(amount), cu: 'INR',
-    tn: `Worker Buddy ${t(b.type)} ${b.id.slice(0, 8)}` });
+  const ascii = (s) => String(s || '').replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ').trim();
+  const q = new URLSearchParams({ pa: worker.upi_id.trim(), pn: ascii(worker.name).slice(0, 40) || 'Worker',
+    am: Number(amount).toFixed(2), cu: 'INR', tn: `Worker Buddy ${b.type} ${b.id.slice(0, 8)}` });
   return 'upi://pay?' + q.toString().replace(/\+/g, '%20').replace(/%40/g, '@'); // UPI apps expect a plain @
 }
 function upiPayHTML(b, worker, amount) {
   const link = upiLink(b, worker, amount);
   if (!link) return `<p class="muted small">${t('upiMissing')}</p>`;
+  UpiQR.last = { b, worker, amount };
   return `<a class="btn btn-upi btn-block btn-big" href="${attr(link)}">${tf('upiPayBtn', amount)}</a>
+    <button type="button" class="btn btn-light btn-block" onclick="showUpiQR(UpiQR.last.b, UpiQR.last.worker, UpiQR.last.amount)">${t('upiQrBtn')}</button>
     <p class="muted small center">${tf('upiHint', esc(worker.upi_id))}</p>`;
+}
+// A UPI QR anyone can scan with any UPI app (the worker shows it, or the employer pays from another phone)
+const UpiQR = { last: null };
+function showUpiQR(b, worker, amount) {
+  const link = upiLink(b, worker, amount);
+  if (!link) return showToast(t('upiMissing'));
+  let svg = '';
+  if (typeof qrcode === 'function') {
+    const q = qrcode(0, 'M');
+    q.addData(link);
+    q.make();
+    svg = q.createSvgTag({ cellSize: 5, margin: 3, scalable: true });
+  }
+  qrModal();
+  document.getElementById('qrBody').innerHTML = `
+    <h3>📲 ${t('upiQrTitle')}</h3>
+    <div class="qr-box qr-upi">${svg || `<p class="muted">${t('qrNoLib')}</p>`}</div>
+    <p class="request-pay center">₹${amount}</p>
+    <p class="center"><b>${esc(worker.name || '')}</b><br><span class="code">${esc(worker.upi_id)}</span></p>
+    <p class="muted small center">${t('upiQrHint')}</p>`;
+  document.getElementById('qrModal').classList.add('open');
 }
 Object.assign(T.en, {
   upiIdLabel: 'UPI ID (to get paid in your bank)',
   upiPayBtn: (n) => `📲 Pay ₹${n} with UPI app`,
   upiHint: (id) => `Opens GPay, PhonePe or Paytm with ${id}. After paying, tap "Pay and finish".`,
-  upiMissing: 'This worker has not added a UPI ID. Pay in cash, then tap "Pay and finish".'
+  upiMissing: 'This worker has not added a UPI ID. Pay in cash, then tap "Pay and finish".',
+  upiQrBtn: '🔳 Show UPI QR (scan from another phone)',
+  upiQrTitle: 'Scan to pay with any UPI app',
+  upiQrHint: 'Works with GPay, PhonePe, Paytm, FamPay, BHIM and bank apps. The money goes straight to the worker.',
+  myUpiQrBtn: (n) => `🔳 Show my UPI QR · ₹${n}`,
+  noUpiYet: 'Add your UPI ID in your profile to show a pay QR.',
+  qrIsUpi: 'That is a UPI payment QR. Scan it with GPay, PhonePe or another UPI app, not here.'
 });
 Object.assign(T.ta, {
   upiIdLabel: 'UPI ID (வங்கியில் கூலி பெற)',
   upiPayBtn: (n) => `📲 UPI ஆப் மூலம் ₹${n} செலுத்து`,
   upiHint: (id) => `${id} உடன் GPay, PhonePe அல்லது Paytm திறக்கும். செலுத்திய பின் "செலுத்தி முடி" அழுத்தவும்.`,
-  upiMissing: 'இந்த வேலையாள் UPI ID சேர்க்கவில்லை. பணமாக கொடுத்து "செலுத்தி முடி" அழுத்தவும்.'
+  upiMissing: 'இந்த வேலையாள் UPI ID சேர்க்கவில்லை. பணமாக கொடுத்து "செலுத்தி முடி" அழுத்தவும்.',
+  upiQrBtn: '🔳 UPI QR காட்டு (வேறு போனில் ஸ்கேன் செய்ய)',
+  upiQrTitle: 'எந்த UPI ஆப்பிலும் ஸ்கேன் செய்து செலுத்துங்கள்',
+  upiQrHint: 'GPay, PhonePe, Paytm, FamPay, BHIM, வங்கி ஆப்கள் அனைத்திலும் வேலை செய்யும். பணம் நேரடியாக வேலையாளுக்குச் செல்லும்.',
+  myUpiQrBtn: (n) => `🔳 என் UPI QR காட்டு · ₹${n}`,
+  noUpiYet: 'கட்டண QR காட்ட உங்கள் சுயவிவரத்தில் UPI ID சேர்க்கவும்.',
+  qrIsUpi: 'இது UPI கட்டண QR. இதை GPay, PhonePe போன்ற UPI ஆப்பில் ஸ்கேன் செய்யுங்கள்.'
 });
 Object.assign(T.hi, {
   upiIdLabel: 'UPI ID (बैंक में पैसा पाने के लिए)',
   upiPayBtn: (n) => `📲 UPI ऐप से ₹${n} दें`,
   upiHint: (id) => `${id} के साथ GPay, PhonePe या Paytm खुलेगा। भुगतान के बाद "दें और पूरा करें" दबाएँ।`,
-  upiMissing: 'इस मज़दूर ने UPI ID नहीं जोड़ी है। नकद दें, फिर "दें और पूरा करें" दबाएँ।'
+  upiMissing: 'इस मज़दूर ने UPI ID नहीं जोड़ी है। नकद दें, फिर "दें और पूरा करें" दबाएँ।',
+  upiQrBtn: '🔳 UPI QR दिखाएँ (दूसरे फ़ोन से स्कैन करें)',
+  upiQrTitle: 'किसी भी UPI ऐप से स्कैन करके भुगतान करें',
+  upiQrHint: 'GPay, PhonePe, Paytm, FamPay, BHIM और बैंक ऐप्स में चलता है। पैसा सीधे मज़दूर को जाता है।',
+  myUpiQrBtn: (n) => `🔳 मेरा UPI QR दिखाएँ · ₹${n}`,
+  noUpiYet: 'भुगतान QR दिखाने के लिए प्रोफ़ाइल में अपनी UPI ID जोड़ें।',
+  qrIsUpi: 'यह UPI भुगतान QR है। इसे GPay, PhonePe या किसी UPI ऐप से स्कैन करें।'
 });
 
 // ---------- Posting a job with no internet ----------

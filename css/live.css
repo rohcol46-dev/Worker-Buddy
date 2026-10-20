@@ -290,3 +290,4 @@ body.onboarding .mic-btn { display: none; }
 .effort-no { background: #FDECEC; border-color: #F0A3A3; }
 
 .pin-site { border-color: #E4561B !important; border-width: 3px !important; font-size: 20px; }
+.qr-upi { background: #fff; padding: 8px; border-radius: 14px; border: 3px solid #1A73E8; }
