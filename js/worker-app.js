@@ -30,8 +30,14 @@ function cacheState() {
 
 // ---------- Profile ----------
 async function loadMe() {
-  const { data, error } = await db.from('workers').select('*').eq('device_id', deviceId()).maybeSingle();
+  let { data, error } = await db.from('workers').select('*').eq('device_id', deviceId()).maybeSingle();
   if (error) throw error;
+  const u = !data && (await db.auth.getSession()).data.session;
+  if (u) {
+    const mine = await db.from('workers').select('*').eq('auth_id', u.user.id).order('created_at', { ascending: false }).limit(1);
+    data = (mine.data || [])[0] || null;
+    if (data && data.device_id) Store.set('device', data.device_id);
+  }
   W.me = data;
 }
 
@@ -78,6 +84,7 @@ async function saveProfile(event) {
   if (error) return showToast(t('saveError'));
   W.me = data;
   cacheState();
+  renderAccount();
   enterOnboarding(false);
   show('home');
   if (!W.map) W.map = heroMap('heroMap');
@@ -899,6 +906,7 @@ async function init() {
       offline = true;
     }
   }
+  initAccount(() => !!W.me, () => location.reload());
   if (offline) {
     // No internet: open with the saved copy so pay slips and the wage record still work
     W.me = Store.get('w_me', null);

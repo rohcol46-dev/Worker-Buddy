@@ -34,8 +34,14 @@ const E = {
 
 // ---------- Profile ----------
 async function loadMe() {
-  const { data, error } = await db.from('employers').select('*').eq('device_id', deviceId()).maybeSingle();
+  let { data, error } = await db.from('employers').select('*').eq('device_id', deviceId()).maybeSingle();
   if (error) throw error;
+  const u = !data && (await db.auth.getSession()).data.session;
+  if (u) {
+    const mine = await db.from('employers').select('*').eq('auth_id', u.user.id).order('created_at', { ascending: false }).limit(1);
+    data = (mine.data || [])[0] || null;
+    if (data && data.device_id) Store.set('device', data.device_id);
+  }
   E.me = data;
 }
 
@@ -48,6 +54,7 @@ async function saveProfile(event) {
   if (error) return showToast(t('saveError'));
   E.me = data;
   Store.set('e_me', E.me);
+  renderAccount();
   document.body.classList.remove('onboarding');
   startApp();
 }
@@ -1291,6 +1298,7 @@ async function init() {
       offline = true;
     }
   }
+  initAccount(() => !!E.me, () => location.reload());
   if (offline) {
     E.me = Store.get('e_me', null);
     if (!E.me) {

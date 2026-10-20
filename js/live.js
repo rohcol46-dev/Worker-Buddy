@@ -8,6 +8,14 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 async function ensureSignedIn() {
   try {
     const { data } = await db.auth.getSession();
+    if (data.session && navigator.onLine) {
+      // The saved sign-in may point to an account that no longer exists: start a fresh one
+      const { error } = await db.auth.getUser();
+      if (error && (error.status === 401 || error.status === 403)) {
+        await db.auth.signOut({ scope: 'local' });
+        data.session = null;
+      }
+    }
     if (!data.session) {
       if (!navigator.onLine) return false;
       const { error } = await db.auth.signInAnonymously();

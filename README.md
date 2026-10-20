@@ -197,9 +197,18 @@ Open http://localhost:5500. For the live demo, open `/employer/` on one phone or
 
 **After changing any file,** raise `VERSION` in `sw.js` (for example `wb-v2`) so phones pick up the new version.
 
+## Switch on Google and mobile number sign-in
+
+The buttons are built in; they say "not switched on yet" until these are set in the Supabase dashboard.
+
+1. **Authentication → URL Configuration:** Site URL `https://worker-buddy-app.vercel.app`; add redirect URLs `https://worker-buddy-app.vercel.app/**` and `http://localhost:5500/**`.
+2. **Authentication → Sign In / Providers → Allow manual linking:** on (lets a phone's account add Google without losing its profile).
+3. **Google:** in Google Cloud Console make an OAuth client (Web application) with the redirect URI `https://ndvnvalwbtqgutpfsqfa.supabase.co/auth/v1/callback`, then paste its client ID and secret into **Providers → Google** and switch it on. Free.
+4. **Phone:** switch on **Providers → Phone** and fill in an SMS provider (Twilio, MessageBird, Vonage or Textlocal). Real SMS costs money and Indian numbers need DLT registration. For a demo, add test numbers with fixed codes under **Phone → Test phone numbers and OTPs** (for example `919000000001=123456`), so no SMS is sent.
+
 ## Limits of this prototype
 
-- **Accounts:** each phone signs in once with Supabase anonymous sign-in (no password or SMS) and owns the profiles it creates. Every action is checked in the database (`assert_mine`), the OTP lives in a private table only that job's employer can read, and 5 wrong OTPs lock the code until the employer makes a new one. Clearing the browser's data loses the account; linking it to a phone number (Supabase phone OTP, needs an SMS provider) is the next step. Names, skills and phone numbers on profiles are still readable by anyone with the app link.
+- **Accounts:** each phone signs in once with Supabase anonymous sign-in (no password or SMS) and owns the profiles it creates. Every action is checked in the database (`assert_mine`), the OTP lives in a private table only that job's employer can read, and 5 wrong OTPs lock the code until the employer makes a new one. Users can add **Google** or a **mobile number (SMS OTP)** to that account (`js/account.js`), then sign in on a new phone or after clearing the browser to get the same profile, jobs and pay slips back. Without one of those, clearing the browser's data loses the account. Names, skills and phone numbers on profiles are still readable by anyone with the app link.
 - **Payment:** the employer's own UPI app opens with the worker's UPI ID and the amount filled in (`upi://pay`, free). The payment itself is not checked automatically; both sides still confirm in Worker Buddy. A payment gateway with auto-confirm needs business KYC.
 - **Nearby places:** shared through the database for 7 days per ~1 km area (`places_cache`), so only the first lookup in an area asks the free Overpass servers. Two servers are asked at once; if both are down and nobody has looked up the area before, saved places are shown.
 - **Offline:** a new job is saved on the employer's phone and posted when the internet returns ("post now" jobs older than an hour are dropped so no stale job rings workers). The worker's in-job actions are saved offline too.
