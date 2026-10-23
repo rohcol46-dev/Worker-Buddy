@@ -5,26 +5,33 @@ function roundTo10(n) {
   return Math.round(n / 10) * 10;
 }
 
+// Rounds up, so the bottom of a range never drops below the legal minimum
+function ceilTo10(n) {
+  return Math.ceil(n / 10) * 10;
+}
+
+// Same rules and rounding as legal_min_wage() and the bookings_fair_pay trigger in supabase/016
 function estimateWage(job) {
   const work = WORK_TYPES[job.type] || WORK_TYPES.coolie;
   const hours = Number(job.hours) || 8;
-  let min = work.min;
-  let max = work.max;
+  let min = Math.max(work.min, MIN_WAGE_DAY);
+  let max = Math.max(work.max, min);
   const parts = [{ label: t('base'), min, max }];
 
-  // More than 8 hours: ₹80 for each extra hour
+  // More than 8 hours: each extra hour at twice the hourly rate (Code on Wages, 2019)
   if (hours > 8) {
-    const extra = (hours - 8) * 80;
-    parts.push({ label: `${t('extraHours')} (${hours - 8})`, min: extra, max: extra });
-    min += extra;
-    max += extra;
+    const extraMin = ceilTo10(((hours - 8) * min) / 4);
+    const extraMax = ceilTo10(((hours - 8) * max) / 4);
+    parts.push({ label: `${t('extraHours')} (${hours - 8})`, min: extraMin, max: extraMax });
+    min += extraMin;
+    max += extraMax;
   }
 
   // Less than 8 hours: pay by the hour, never below half a day
   if (hours < 8) {
     const share = Math.max(hours / 8, 0.5);
-    const cutMin = roundTo10(min * share) - min;
-    const cutMax = roundTo10(max * share) - max;
+    const cutMin = ceilTo10(min * share) - min;
+    const cutMax = ceilTo10(max * share) - max;
     parts.push({ label: t('shortShift'), min: cutMin, max: cutMax });
     min += cutMin;
     max += cutMax;

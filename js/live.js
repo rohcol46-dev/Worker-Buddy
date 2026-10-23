@@ -74,6 +74,45 @@ function kmBetween(a, b) {
   return distanceKm({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng });
 }
 
+// ---------- People (supabase/016_private_data_and_fair_pay.sql) ----------
+// Other people's profiles come from workers_public / employers_public: no phone number, and the
+// location rounded to about 1 km. The phone, UPI ID and live location of the person on my own job
+// come from job_contacts.
+async function myProfile(kind) {
+  const { data, error } = await db.rpc(kind === 'worker' ? 'get_my_worker' : 'get_my_employer', { p_device: deviceId() });
+  if (error) throw error;
+  const me = (data || [])[0] || null;
+  if (me && me.device_id) Store.set('device', me.device_id);
+  return me;
+}
+
+// The workers (or employers) on these jobs, by id, with their contact details added
+async function peopleOn(kind, bookings) {
+  const key = kind === 'worker' ? 'worker_id' : 'employer_id';
+  const jobs = (bookings || []).filter((b) => b && b[key]);
+  const ids = [...new Set(jobs.map((b) => b[key]))];
+  if (!ids.length) return {};
+  const [{ data: rows }, { data: contacts }] = await Promise.all([
+    db.from(kind === 'worker' ? 'workers_public' : 'employers_public').select('*').in('id', ids),
+    db.rpc('job_contacts', { p_bookings: jobs.map((b) => b.id) })
+  ]);
+  const people = {};
+  (rows || []).forEach((p) => { people[p.id] = p; });
+  (contacts || []).forEach((c) => {
+    const p = people[c.person_id];
+    if (!p) return;
+    if (c.phone) p.phone = c.phone;
+    if (c.upi_id) p.upi_id = c.upi_id;
+    if (c.lat != null) { p.lat = c.lat; p.lng = c.lng; }
+  });
+  return people;
+}
+
+// Overtime per hour: twice the agreed wage per hour (Code on Wages, 2019). The database sets it on every job.
+function otRate(b) {
+  return b.ot_rate || Math.ceil((b.agreed_wage * 2) / Math.max(b.hours || 8, 4));
+}
+
 // The text worker and employer share on WhatsApp as their work agreement
 function agreementText(b, employerName, workerName) {
   return [

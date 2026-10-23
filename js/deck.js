@@ -57,7 +57,8 @@ function welfareHTML(counts) {
 function openRateCard() {
   const rows = Object.entries(WORK_TYPES).map(([k, w]) =>
     `<div><span>${w.icon} ${t(k)}</span><span>₹${w.min} – ₹${w.max}</span></div>`).join('');
-  const rules = ['ruleExtra', 'ruleHalf', 'ruleLoad', 'ruleRisky', 'ruleNight', 'ruleHeat', 'ruleNoCut'].map((k) => `<li>${t(k)}</li>`).join('');
+  const ruleKeys = ['ruleExtra', 'ruleHalf', 'ruleLoad', 'ruleRisky', 'ruleNight', 'ruleHeat', 'ruleNoCut'];
+  const rules = [tf('ruleMin', MIN_WAGE_DAY), ...ruleKeys.map((k) => t(k))].map((r) => `<li>${r}</li>`).join('');
   document.getElementById('slipBody').innerHTML = `
     <div class="slip" id="slipPrint">
       <div class="slip-head"><b>🤝 Worker Buddy</b><span>${t('rateCardTitle')}</span></div>
@@ -66,7 +67,7 @@ function openRateCard() {
     </div>`;
   slipShareText = [`📋 Worker Buddy · ${t('rateCardTitle')}`,
     ...Object.entries(WORK_TYPES).map(([k, w]) => `${t(k)}: ₹${w.min}–₹${w.max}`),
-    ...['ruleExtra', 'ruleHalf', 'ruleLoad', 'ruleRisky', 'ruleNight', 'ruleHeat', 'ruleNoCut'].map((k) => '• ' + t(k))].join('\n');
+    '• ' + tf('ruleMin', MIN_WAGE_DAY), ...ruleKeys.map((k) => '• ' + t(k))].join('\n');
   document.getElementById('slipModal').classList.add('open');
 }
 
@@ -178,7 +179,8 @@ Object.assign(T.en, {
   heatSaved: 'Heat report saved in your record.',
   rateCard: '📋 Fair rate card',
   rateCardTitle: 'Fair rate card (8-hour day)',
-  ruleExtra: '+₹80 for each hour after 8 hours (overtime is added automatically)',
+  ruleMin: (n) => `Never below the legal minimum wage: ₹${n} for an 8-hour day (Tamil Nadu)`,
+  ruleExtra: 'Each hour after 8 hours is paid double: twice the hourly rate (overtime is added automatically)',
   ruleHalf: 'Shorter jobs are paid by the hour, never below half a day',
   ruleLoad: 'Heavier work: +₹50 (medium) or +₹100 (heavy)',
   ruleRisky: 'Risky work (height, electric, sewer): +₹100',
@@ -219,7 +221,8 @@ Object.assign(T.ta, {
   heatSaved: 'வெப்ப அறிக்கை உங்கள் பதிவில் சேமிக்கப்பட்டது.',
   rateCard: '📋 நியாயமான கூலி அட்டை',
   rateCardTitle: 'நியாயமான கூலி அட்டை (8 மணி நேர நாள்)',
-  ruleExtra: '8 மணி நேரத்துக்கு மேல் ஒவ்வொரு மணிக்கும் +₹80 (கூடுதல் நேரம் தானாகச் சேரும்)',
+  ruleMin: (n) => `சட்டப்படி குறைந்தபட்ச கூலிக்குக் கீழே இல்லை: 8 மணி நேர நாளுக்கு ₹${n} (தமிழ்நாடு)`,
+  ruleExtra: '8 மணி நேரத்துக்கு மேல் ஒவ்வொரு மணிக்கும் இரட்டிப்பு கூலி: மணிக் கூலியின் இரண்டு மடங்கு (கூடுதல் நேரம் தானாகச் சேரும்)',
   ruleHalf: 'குறைந்த நேர வேலைக்கு மணிக்கணக்கில், அரை நாளுக்குக் குறையாமல்',
   ruleLoad: 'கடினமான வேலை: +₹50 (நடுத்தரம்) அல்லது +₹100 (கனமானது)',
   ruleRisky: 'ஆபத்தான வேலை (உயரம், மின்சாரம், சாக்கடை): +₹100',
@@ -260,7 +263,8 @@ Object.assign(T.hi, {
   heatSaved: 'गर्मी की रिपोर्ट आपके रिकॉर्ड में सेव हो गई।',
   rateCard: '📋 सही मज़दूरी कार्ड',
   rateCardTitle: 'सही मज़दूरी कार्ड (8 घंटे का दिन)',
-  ruleExtra: '8 घंटे के बाद हर घंटे +₹80 (ओवरटाइम अपने आप जुड़ता है)',
+  ruleMin: (n) => `कानूनी न्यूनतम मज़दूरी से कम कभी नहीं: 8 घंटे के दिन के ₹${n} (तमिलनाडु)`,
+  ruleExtra: '8 घंटे के बाद हर घंटे दोगुनी मज़दूरी: घंटे की दर का दो गुना (ओवरटाइम अपने आप जुड़ता है)',
   ruleHalf: 'छोटे काम घंटे के हिसाब से, आधे दिन से कम नहीं',
   ruleLoad: 'भारी काम: +₹50 (मध्यम) या +₹100 (भारी)',
   ruleRisky: 'जोखिम वाला काम (ऊँचाई, बिजली, सीवर): +₹100',

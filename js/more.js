@@ -17,7 +17,7 @@ async function loadOffers(bookingId) {
   const { data } = await db.from('offers').select('*').eq('booking_id', bookingId).eq('status', 'open').order('amount');
   const list = data || [];
   const ids = list.map((o) => o.worker_id);
-  const { data: ws } = ids.length ? await db.from('workers').select('*').in('id', ids) : { data: [] };
+  const { data: ws } = ids.length ? await db.from('workers_public').select('*').in('id', ids) : { data: [] };
   list.forEach((o) => { o.worker = (ws || []).find((w) => w.id === o.worker_id) || {}; });
   return list;
 }

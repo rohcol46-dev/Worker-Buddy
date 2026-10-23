@@ -105,24 +105,16 @@ function trustedBadge(w) {
   return isTrusted(w) ? `<span class="trusted">✔ ${t('trusted')}</span>` : '';
 }
 
-function tagCounts(rows, field) {
-  const counts = {};
-  (rows || []).forEach((r) => (r[field] || []).forEach((k) => { counts[k] = (counts[k] || 0) + 1; }));
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-}
-
 function tagChipsHTML(counts, limit) {
   if (!counts.length) return `<span class="muted small">${t('noReviews')}</span>`;
   return counts.slice(0, limit || 5).map(([k, n]) =>
     `<span class="tag">${TAG_ICONS[k] || ''} ${t('tag_' + k)} ×${n}</span>`).join('');
 }
 
+// Counted by the database: other people's jobs are not readable from the app
 async function reviewsOf(kind, id) {
-  const field = kind === 'worker' ? 'worker_tags' : 'employer_tags';
-  const { data } = await db.from('bookings').select(field)
-    .eq(kind === 'worker' ? 'worker_id' : 'employer_id', id)
-    .neq(field, '{}').limit(100);
-  return tagCounts(data, field);
+  const { data } = await db.rpc('review_tags', { p_kind: kind, p_id: id });
+  return (data || []).map((r) => [r.tag, r.n]);
 }
 
 function workerProfileHTML(w, counts, km) {

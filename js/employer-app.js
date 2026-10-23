@@ -34,15 +34,7 @@ const E = {
 
 // ---------- Profile ----------
 async function loadMe() {
-  let { data, error } = await db.from('employers').select('*').eq('device_id', deviceId()).maybeSingle();
-  if (error) throw error;
-  const u = !data && (await db.auth.getSession()).data.session;
-  if (u) {
-    const mine = await db.from('employers').select('*').eq('auth_id', u.user.id).order('created_at', { ascending: false }).limit(1);
-    data = (mine.data || [])[0] || null;
-    if (data && data.device_id) Store.set('device', data.device_id);
-  }
-  E.me = data;
+  E.me = await myProfile('employer');
 }
 
 async function saveProfile(event) {
@@ -50,18 +42,18 @@ async function saveProfile(event) {
   const f = event.target;
   const row = { name: f.name.value.trim(), phone: f.phone.value.replace(/\D/g, ''), device_id: deviceId() };
   if (!/^[6-9]\d{9}$/.test(row.phone)) return showToast(t('badPhone'));
-  const { data, error } = await db.from('employers').insert(row).select().single();
+  const { error } = await db.from('employers').insert(row);
   if (error) return showToast(t('saveError'));
-  E.me = data;
+  await loadMe();
   Store.set('e_me', E.me);
   renderAccount();
   document.body.classList.remove('onboarding');
   startApp();
 }
 
-// ---------- Online workers on the map ----------
+// ---------- Online workers on the map (placed to about 1 km; no phone numbers) ----------
 async function loadWorkers() {
-  const { data } = await db.from('workers').select('*').eq('online', true);
+  const { data } = await db.from('workers_public').select('*').eq('online', true);
   E.workers = data || [];
   drawWorkers();
 }
@@ -104,7 +96,7 @@ function renderPickWorker() {
 async function openWorkerProfile(id) {
   let w = E.workers.find((x) => x.id === id);
   if (!w) {
-    const { data } = await db.from('workers').select('*').eq('id', id).maybeSingle();
+    const { data } = await db.from('workers_public').select('*').eq('id', id).maybeSingle();
     w = data;
   }
   if (!w) return;
@@ -157,7 +149,7 @@ async function renderFreeOnDay() {
   const value = document.getElementById('laterInput').value;
   if (!value || !navigator.onLine) return (el.textContent = '');
   const day = value.slice(0, 10);
-  const { count } = await db.from('workers').select('id', { count: 'exact', head: true })
+  const { count } = await db.from('workers_public').select('id', { count: 'exact', head: true })
     .eq('skill', E.type).contains('available_days', [day]);
   el.textContent = tf('freeOnDay', count || 0);
 }
@@ -560,7 +552,7 @@ function renderBooking() {
     action = `
       <div class="agreement">
         <div><span>${t('agreedWage')}</span><span>₹${b.agreed_wage}</span></div>
-        ${b.overtime_hours ? `<div><span>${t('overtimeLabel')} (${b.overtime_hours} h)</span><span>+₹${80 * b.overtime_hours}</span></div>` : ''}
+        ${b.overtime_hours ? `<div><span>${t('overtimeLabel')} (${b.overtime_hours} h)</span><span>+₹${otRate(b) * b.overtime_hours}</span></div>` : ''}
         <div><span>${t('workedTime')}</span><span>${fmtDuration(workedMinutes(b))}</span></div>
         ${b.travel_pay ? `<div><span>${t('travelPay')}</span><span>+₹${b.travel_pay}</span></div>` : ''}
         ${b.rain_off ? `<div><span>${t('rainLabel')}</span><span>🌧️</span></div>` : ''}
@@ -629,6 +621,25 @@ function renderBooking() {
 }
 
 // Live tracking (Rapido): the worker's pin moves on the map with the arrival time
+// The booked worker's live spot (only the employer on that job gets it) and everyone else's rough spot
+async function refreshWorkerSpots() {
+  if (!navigator.onLine || document.hidden) return;
+  const onTheWay = (b) => b && b.worker_id && ['assigned', 'started'].includes(b.status);
+  if (onTheWay(E.booking) && E.worker && E.worker.id === E.booking.worker_id) {
+    const w = (await peopleOn('worker', [E.booking]))[E.booking.worker_id];
+    if (w && E.worker && E.worker.id === w.id) {
+      E.worker = { ...E.worker, ...w };
+      updateTracking(false);
+    }
+  }
+  const crew = E.crew.filter(onTheWay);
+  if (crew.length) {
+    Object.assign(E.crewWorkers, await peopleOn('worker', crew));
+    renderBooking();
+  }
+  loadWorkers();
+}
+
 function updateTracking(fit) {
   const b = E.booking;
   const w = E.worker;
@@ -688,10 +699,9 @@ function crewDone() {
 }
 
 async function loadCrewWorkers() {
-  const ids = [...new Set(E.crew.map((b) => b.worker_id).filter((id) => id && !E.crewWorkers[id]))];
-  if (!ids.length) return;
-  const { data } = await db.from('workers').select('*').in('id', ids);
-  (data || []).forEach((w) => { E.crewWorkers[w.id] = w; });
+  const need = E.crew.filter((b) => b.worker_id && !E.crewWorkers[b.worker_id]);
+  if (!need.length) return;
+  Object.assign(E.crewWorkers, await peopleOn('worker', need));
 }
 
 function crewSlotHTML(b, i) {
@@ -888,7 +898,7 @@ async function onBookingChange(payload) {
     // A booking for later was accepted
     if (b.status === 'assigned' && b.scheduled_for && !b.started_at && b.accepted_at &&
         Date.now() - Date.parse(b.accepted_at) < 30000) {
-      const { data: w } = await db.from('workers').select('name').eq('id', b.worker_id).maybeSingle();
+      const { data: w } = await db.from('workers_public').select('name').eq('id', b.worker_id).maybeSingle();
       showToast(tf('laterAccepted', w ? w.name : t('worker'), whenText(b)));
       ring();
       if (document.getElementById('bookings').classList.contains('active')) renderBookings();
@@ -899,8 +909,7 @@ async function onBookingChange(payload) {
   E.booking = b;
   if (!b.worker_id) E.worker = null;
   if (b.worker_id && (!E.worker || E.worker.id !== b.worker_id)) {
-    const { data } = await db.from('workers').select('*').eq('id', b.worker_id).maybeSingle();
-    E.worker = data;
+    E.worker = (await peopleOn('worker', [b]))[b.worker_id] || null;
   }
   if (was.status === 'assigned' && b.status === 'searching') {
     showToast(t('workerCantCome'));
@@ -982,10 +991,7 @@ async function loadOpenBooking() {
     return refreshCrew();
   }
   E.booking = b;
-  if (b.worker_id) {
-    const { data: w } = await db.from('workers').select('*').eq('id', b.worker_id).maybeSingle();
-    E.worker = w;
-  }
+  if (b.worker_id) E.worker = (await peopleOn('worker', [b]))[b.worker_id] || null;
   await loadMessages(b.id);
   if (b.status === 'searching') E.offers = await loadOffers(b.id);
 }
@@ -997,9 +1003,8 @@ async function renderBookings() {
     const { data } = await db.from('bookings').select('*').eq('employer_id', E.me.id)
       .order('created_at', { ascending: false }).limit(50);
     const list = data || [];
-    const ids = [...new Set(list.map((b) => b.worker_id).filter(Boolean))];
-    const { data: ws } = ids.length ? await db.from('workers').select('*').in('id', ids) : { data: [] };
-    list.forEach((b) => { b.worker = (ws || []).find((x) => x.id === b.worker_id) || null; });
+    const ws = await peopleOn('worker', list);
+    list.forEach((b) => { b.worker = ws[b.worker_id] || null; });
     E.records = list;
     Store.set('e_records', list);
     Store.set('e_me', E.me);
@@ -1096,9 +1101,9 @@ async function saveGst(event) {
   event.preventDefault();
   const gst = event.target.gst.value.trim().toUpperCase();
   if (!GSTIN_RE.test(gst)) return showToast(t('gstBad'));
-  const { data, error } = await db.from('employers').update({ gstin: gst }).eq('id', E.me.id).select().single();
+  const { error } = await db.from('employers').update({ gstin: gst }).eq('id', E.me.id);
   if (error) return showToast(t('saveError'));
-  E.me = data;
+  E.me = { ...E.me, gstin: gst };
   Store.set('e_me', E.me);
   showToast(t('gstSaved'));
   renderGstCard();
@@ -1253,19 +1258,9 @@ async function startApp() {
 
   db.channel('employer-live')
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bookings', filter: `employer_id=eq.${E.me.id}` }, onBookingChange)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'workers' }, (p) => {
-      // The assigned worker moved: move their pin and update the arrival time
-      if (E.worker && p.new && p.new.id === E.worker.id) {
-        E.worker = { ...E.worker, ...p.new };
-        updateTracking(false);
-      }
-      if (p.new && E.crewWorkers[p.new.id]) {
-        E.crewWorkers[p.new.id] = { ...E.crewWorkers[p.new.id], ...p.new };
-        renderBooking();
-      }
-      loadWorkers();
-    })
     .subscribe();
+  // Worker rows are no longer sent live (they hold phone numbers and GPS), so positions refresh every 15 seconds
+  setInterval(refreshWorkerSpots, 15000);
   listenOffers((o) => {
     if (!E.booking || o.booking_id !== E.booking.id) return;
     if (o.status === 'open') ring();

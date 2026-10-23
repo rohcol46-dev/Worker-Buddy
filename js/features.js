@@ -130,7 +130,7 @@ function fmtDateTime(iso) {
 }
 
 function amountOf(b) {
-  return b.paid_amount != null ? b.paid_amount : b.agreed_wage + 80 * (b.overtime_hours || 0);
+  return b.paid_amount != null ? b.paid_amount : b.agreed_wage + otRate(b) * (b.overtime_hours || 0);
 }
 
 // The slip itself (also used for printing / saving as PDF)
@@ -143,7 +143,7 @@ function slipHTML(b, employer, worker) {
     [t('hours'), `${b.hours} ${t('hoursUnit')}`],
     [t('workedTime'), fmtDuration(workedMinutes(b))],
     [t('agreedWage'), `₹${b.agreed_wage}`],
-    [t('overtimeLabel'), b.overtime_hours ? `${b.overtime_hours} h · +₹${80 * b.overtime_hours}` : '—'],
+    [t('overtimeLabel'), b.overtime_hours ? `${b.overtime_hours} h · +₹${otRate(b) * b.overtime_hours}` : '—'],
     [t('tipLabel'), b.tip ? `+₹${b.tip}` : '—'],
     [t('travelPay'), b.travel_pay ? `+₹${b.travel_pay}` : '—'],
     ...(b.materials_amount ? [[t('materialsLabel'), `+₹${b.materials_amount}`]] : []),
@@ -453,7 +453,7 @@ Object.assign(T.en, {
   ph_needTools: 'I need tools or materials', ph_lateTen: 'I will be 10 minutes late', ph_workDone: 'The work is done',
   ph_comeIn: 'Please come in', ph_showWork: 'Let me show you the work', ph_drinkWater: 'Take a break and drink water',
   ph_payingNow: 'I am paying now', ph_goodWork: 'Good work, thank you', ph_callMe: 'Please call me',
-  overtimeLive: (h) => `Past the agreed hours: +₹80 for each extra hour (${h} so far)`,
+  overtimeLive: (h) => `Past the agreed hours: each extra hour is paid double (${h} so far)`,
   overtimeLabel: 'Overtime',
   employerSaysPaid: (w) => `The employer says ₹${w} was paid. Did you receive it?`,
   yesReceived: '✅ Yes, I received it',
@@ -506,7 +506,7 @@ Object.assign(T.ta, {
   ph_needTools: 'எனக்கு கருவிகள் அல்லது பொருட்கள் வேண்டும்', ph_lateTen: '10 நிமிடம் தாமதமாகும்', ph_workDone: 'வேலை முடிந்தது',
   ph_comeIn: 'உள்ளே வாருங்கள்', ph_showWork: 'வேலையைக் காட்டுகிறேன்', ph_drinkWater: 'ஓய்வு எடுத்து தண்ணீர் குடியுங்கள்',
   ph_payingNow: 'இப்போது கூலி கொடுக்கிறேன்', ph_goodWork: 'நல்ல வேலை, நன்றி', ph_callMe: 'என்னை அழையுங்கள்',
-  overtimeLive: (h) => `ஒப்புக்கொண்ட நேரத்தைத் தாண்டியது: ஒவ்வொரு கூடுதல் மணிக்கும் +₹80 (இதுவரை ${h})`,
+  overtimeLive: (h) => `ஒப்புக்கொண்ட நேரத்தைத் தாண்டியது: ஒவ்வொரு கூடுதல் மணிக்கும் இரட்டிப்பு கூலி (இதுவரை ${h})`,
   overtimeLabel: 'கூடுதல் நேரம்',
   employerSaysPaid: (w) => `₹${w} கொடுத்ததாக முதலாளி சொல்கிறார். உங்களுக்கு கிடைத்ததா?`,
   yesReceived: '✅ ஆம், கிடைத்தது',
