@@ -108,7 +108,7 @@ insert into public.bookings (employer_id, worker_id, type, area, hours, load, wa
    700, 900, 800, 'paid', now(), now(), now());
 do $$ declare m record; begin
   select * into m from public.admin_weekly_metrics
-   where week = date_trunc('week', now() at time zone 'Asia/Kolkata')::date;
+   where week = date_trunc('week', now() at time zone 'UTC')::date;
   assert m.jobs_confirmed_paid >= 2, 'confirmed-paid jobs counted';
   assert m.repeat_hires >= 1, 'repeat hire counted';
   assert m.jobs_expired >= 1, 'expired job counted';

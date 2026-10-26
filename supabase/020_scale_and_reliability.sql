@@ -138,11 +138,11 @@ revoke all on function public.log_client_error(text, text, text, text) from publ
 grant execute on function public.log_client_error(text, text, text, text) to anon, authenticated;
 
 -- ---------- 6. Weekly numbers ----------
--- Weeks start on Monday, India time. "Confirmed paid" = the worker confirmed the money arrived.
+-- Weeks start on Monday, UTC. "Confirmed paid" = the worker confirmed the money arrived.
 -- "Repeat hires" = paid jobs where the same employer had paid the same worker before.
 create view public.admin_weekly_metrics with (security_invoker = true) as
   with b as (
-    select *, date_trunc('week', created_at at time zone 'Asia/Kolkata')::date as week,
+    select *, date_trunc('week', created_at at time zone 'UTC')::date as week,
            exists (select 1 from public.bookings p
                     where p.employer_id = x.employer_id and p.worker_id = x.worker_id
                       and p.worker_confirmed_at is not null and p.created_at < x.created_at) as repeat_pair
