@@ -119,6 +119,43 @@ async function peopleOn(kind, bookings) {
   return people;
 }
 
+// The exact job site and full address. Open jobs show only the area, to about 1 km; the employer,
+// and the worker once the job is theirs, get the exact one (job_sites). Kept on the phone for offline use.
+const Sites = Store.get('sites', {}) || {};
+const SitesAsked = new Set();
+let SitesWanted = [];
+async function loadSites(ids) {
+  const need = ids.filter((id) => UUID_RE.test(id) && !Sites[id]);
+  if (!need.length || !navigator.onLine) return false;
+  const { data, error } = await db.rpc('job_sites', { p_bookings: need });
+  if (error || !data || !data.length) return false;
+  data.forEach((r) => { Sites[r.booking_id] = { lat: r.lat, lng: r.lng, address: r.address }; });
+  const keep = Object.keys(Sites).slice(-50);
+  Store.set('sites', Object.fromEntries(keep.map((k) => [k, Sites[k]])));
+  return true;
+}
+function withSite(b) {
+  if (!b || !b.id) return b;
+  const s = Sites[b.id];
+  if (s) return { ...b, lat: s.lat, lng: s.lng, area: s.address || b.area };
+  const key = `${b.id}:${b.worker_id || ''}`; // ask again once a worker has the job
+  if (UUID_RE.test(b.id) && navigator.onLine && !SitesAsked.has(key)) {
+    SitesAsked.add(key);
+    // Every job drawn in this moment is asked for in one call, then the screen is redrawn once
+    if (!SitesWanted.length) {
+      setTimeout(() => {
+        const asked = SitesWanted;
+        SitesWanted = [];
+        loadSites(asked.map((x) => x.id)).then((got) => {
+          if (got && App.onSite) App.onSite();
+        }, () => asked.forEach((x) => SitesAsked.delete(x.key)));
+      }, 0);
+    }
+    SitesWanted.push({ id: b.id, key });
+  }
+  return b;
+}
+
 // Overtime per hour: twice the agreed wage per hour (Code on Wages, 2019). The database sets it on every job;
 // a finished job saved on the phone before that was paid at the old flat ₹80.
 function otRate(b) {

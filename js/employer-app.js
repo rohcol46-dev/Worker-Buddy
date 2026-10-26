@@ -491,7 +491,7 @@ function renderBooking() {
   clearInterval(E.searchTimer);
   clearInterval(E.workTimer);
   if (E.crew.length) return renderCrew();
-  const b = E.booking;
+  const b = withSite(E.booking); // the full address (the booking row has only the area)
   if (b && Mat.bookingId !== b.id) {
     Mat.bookingId = b.id;
     Mat.list = [];
@@ -660,7 +660,7 @@ async function refreshWorkerSpots() {
 }
 
 function updateTracking(fit) {
-  const b = E.booking;
+  const b = withSite(E.booking);
   const w = E.worker;
   const visible = b && w && w.lat != null && b.lat != null && ['assigned', 'started'].includes(b.status);
   if (!visible) {
@@ -689,7 +689,7 @@ function offersHTML() {
     return `
       <div class="mini-card offer-card">
         <div><b>${esc(w.name || '')}</b> ${trustedBadge(w)}<br>
-          <span class="muted small">${workerStars(w)}${w.lat != null ? ' · ' + etaText(w, E.booking) : ''}</span></div>
+          <span class="muted small">${workerStars(w)}${w.lat != null ? ' · ' + etaText(w, withSite(E.booking)) : ''}</span></div>
         <button class="btn btn-accept btn-small" onclick="acceptOffer(${o.id})">${tf('acceptOffer', o.amount)}</button>
       </div>`;
   }).join('');
@@ -732,7 +732,7 @@ function crewSlotHTML(b, i) {
   else {
     let action = '';
     if (b.status === 'assigned') {
-      action = `<span class="otp-mini">OTP <b>${otpOf(b)}</b></span>${w && w.lat != null ? ` <small class="muted">🛵 ${etaText(w, b)}</small>` : ''}`;
+      action = `<span class="otp-mini">OTP <b>${otpOf(b)}</b></span>${w && w.lat != null ? ` <small class="muted">🛵 ${etaText(w, withSite(b))}</small>` : ''}`;
     } else if (b.status === 'started') {
       action = `<span class="badge badge-accepted">${statusLabel('started')}</span>`;
     } else if (b.status === 'completed') {
@@ -762,7 +762,7 @@ function renderCrew() {
   document.getElementById('bookingLive').innerHTML = `
     <div class="card job-live">
       <h2>👥 ${tf('teamOf', crew.length, t(first.type))}</h2>
-      <p class="muted">📍 ${esc(first.area)} · ⏱️ ${first.hours} ${t('hoursUnit')} · ${tf('teamFilled', filled, crew.length)}</p>
+      <p class="muted">📍 ${esc(withSite(first).area)} · ⏱️ ${first.hours} ${t('hoursUnit')} · ${tf('teamFilled', filled, crew.length)}</p>
       ${searching.length && !first.scheduled_for ? `<div class="big-timer"><small>${t('slotFinding')}</small><b id="searchClock">10:00</b></div>` : ''}
       <div class="crew">${crew.map(crewSlotHTML).join('')}</div>
       <div class="agreement"><div><span><b>${t('teamTotal')}</b></span><span><b>₹${total}</b></span></div></div>
@@ -952,8 +952,9 @@ async function refreshBooking() {
   if (data) await onBookingChange({ new: data });
 }
 
-function retryBooking(toEveryone) {
-  const b = E.booking;
+async function retryBooking(toEveryone) {
+  await loadSites([E.booking.id]);
+  const b = withSite(E.booking);
   E.type = b.type; E.hours = b.hours; E.load = b.load; E.risky = b.risky;
   E.preferred = toEveryone ? null : E.workers.find((w) => w.id === b.preferred_worker_id) || null;
   document.getElementById('areaInput').value = b.area;
@@ -1183,8 +1184,9 @@ function rateRecord(i) {
 }
 
 // Book the same worker again (Urban Company "rebook your professional")
-function bookAgain(i) {
-  const b = E.records[i];
+async function bookAgain(i) {
+  await loadSites([E.records[i].id]);
+  const b = withSite(E.records[i]);
   E.type = b.type; E.hours = b.hours; E.load = b.load; E.risky = b.risky;
   document.getElementById('areaInput').value = b.area;
   if (b.lat != null) setSite(b, b.area);
@@ -1231,6 +1233,7 @@ App.onHeat = () => { if (E.me) renderEstimate(); };
 App.onMove = () => {};
 App.onMessages = () => (E.crewChat ? drawCrewChat() : renderBooking());
 App.onOtp = () => { if (!E.crewChat && !E.crewPay) renderBooking(); };
+App.onSite = App.onOtp;
 // A message from a team member whose chat is not open: still tell the employer
 App.onOtherMessage = (m) => {
   const b = E.crew.find((x) => x.id === m.booking_id);

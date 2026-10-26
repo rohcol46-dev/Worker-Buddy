@@ -1,6 +1,6 @@
 -- Jobs expire on the server, "online" times out, sample workers are hidden, error reports are capped,
 -- and the weekly numbers count confirmed-paid jobs.
---   e9 employer    w9 worker (mason)    w8 another account
+--   e9 employer    f9 worker (painter)    f8 another painter
 reset role;
 -- A test helper: run SQL and expect a given error
 create function pg_temp.expect_error(p_sql text, p_error text) returns void language plpgsql as $$
