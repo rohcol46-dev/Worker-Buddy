@@ -52,8 +52,15 @@ async function saveProfile(event) {
 }
 
 // ---------- Online workers on the map (placed to about 1 km; no phone numbers) ----------
+// Only workers within about 50 km, so each employer's phone doesn't download every online worker in India
+const NEAR_DEG = 0.45;
 async function loadWorkers() {
-  const { data } = await db.from('workers_public').select('*').eq('online', true);
+  const at = E.site || App.here;
+  E.workersAt = { lat: at.lat, lng: at.lng };
+  const { data } = await db.from('workers_public').select('*').eq('online', true)
+    .gte('lat', at.lat - NEAR_DEG).lte('lat', at.lat + NEAR_DEG)
+    .gte('lng', at.lng - NEAR_DEG).lte('lng', at.lng + NEAR_DEG)
+    .limit(300);
   E.workers = data || [];
   drawWorkers();
 }
@@ -243,6 +250,8 @@ function nearestAreaName(p) {
 
 function setSite(p, label) {
   E.site = { lat: p.lat, lng: p.lng };
+  // The site moved to another area: load the workers near it
+  if (!E.workersAt || (kmBetween(E.workersAt, E.site) ?? 0) > 10) loadWorkers();
   if (label) {
     document.getElementById('areaInput').value = label.slice(0, 80);
     E.siteText = label.slice(0, 80);
@@ -1256,6 +1265,16 @@ async function startApp() {
   if (!navigator.onLine) return;
   await loadFavorites();
   await loadWorkers();
+  // If this phone already allows location, start from where the employer is (no permission prompt here)
+  if (navigator.permissions && !E.site) {
+    navigator.permissions.query({ name: 'geolocation' }).then((s) => {
+      if (s.state === 'granted') locate((ok) => {
+        if (!ok || E.site) return;
+        if (E.map) E.map.setView([App.here.lat, App.here.lng], 14);
+        loadWorkers();
+      });
+    }).catch(() => {});
+  }
   await loadOpenBooking();
   syncForm();
   listenMaterials((row, kind) => {
