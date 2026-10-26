@@ -52,8 +52,14 @@ async function saveProfile(event) {
 }
 
 // ---------- Online workers on the map (placed to about 1 km; no phone numbers) ----------
+// Only workers within about 50 km, so each employer's phone doesn't download every online worker in India
+const NEAR_DEG = 0.45;
 async function loadWorkers() {
-  const { data } = await db.from('workers_public').select('*').eq('online', true);
+  const at = E.site || App.here;
+  const { data } = await db.from('workers_public').select('*').eq('online', true)
+    .gte('lat', at.lat - NEAR_DEG).lte('lat', at.lat + NEAR_DEG)
+    .gte('lng', at.lng - NEAR_DEG).lte('lng', at.lng + NEAR_DEG)
+    .limit(300);
   E.workers = data || [];
   drawWorkers();
 }

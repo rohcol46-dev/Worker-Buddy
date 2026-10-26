@@ -153,18 +153,42 @@ async function loadEarnings() {
 }
 
 // ---------- Live updates ----------
+// Only jobs for my skill come live (a worker can only take jobs of their own skill),
+// so the database doesn't check every job change against every worker in the country
+function listenBookings() {
+  if (W.bookingsFor === W.me.skill) return;
+  if (W.bookingsChannel) db.removeChannel(W.bookingsChannel);
+  W.bookingsFor = W.me.skill;
+  W.bookingsChannel = db.channel('worker-bookings-' + W.me.skill)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `type=eq.${W.me.skill}` }, (payload) => onBookingChange(payload))
+    .subscribe();
+}
+
 function listen() {
+  listenBookings();
   if (W.listening) return;
   W.listening = true;
   listenMaterials((row) => {
     if (row.status === 'approved') showToast(`✅ ${row.item} · ₹${row.amount}`);
     renderActive();
   });
-  db.channel('worker-bookings')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => onBookingChange(payload))
-    .subscribe();
   // A later job taken by someone else no longer comes as a live update (only its two people can read it)
   setInterval(() => { if (!document.hidden) loadLaterJobs(); }, 60000);
+  // While I'm online, tell the database every 4 minutes that this phone is still here.
+  // After 30 minutes with no sign the database sets me offline, so employers only see workers who can answer.
+  setInterval(() => {
+    if (W.me && W.me.online && navigator.onLine) db.rpc('worker_seen', { p_worker: W.me.id }).then(() => {}, () => {});
+  }, 240000);
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden || !W.me || !navigator.onLine) return;
+    const wasOnline = W.me.online;
+    const me = await myProfile('worker').catch(() => null);
+    if (!me) return;
+    W.me = me;
+    if (wasOnline && !W.me.online) showToast(t('wentOffline'));
+    cacheState();
+    renderHome();
+  });
   listenMessages((m) => {
     if (m.sender !== 'worker') {
       showToast(`💬 ${t('ph_' + m.phrase)}`);

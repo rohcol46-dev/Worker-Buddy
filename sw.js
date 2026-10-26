@@ -2,7 +2,7 @@
 // App files come from the network when online (so a new version shows at once) and from the
 // phone when offline; map tiles seen before are kept too.
 // Live data (Supabase, weather, places) always goes to the network.
-const VERSION = 'wb-v21';
+const VERSION = 'wb-v22';
 const APP_FILES = [
   './',
   './index.html',
@@ -15,6 +15,7 @@ const APP_FILES = [
   './js/wage.js',
   './js/safety.js',
   './js/live.js',
+  './js/report.js',
   './js/account.js',
   './js/trust.js',
   './js/features.js',
@@ -42,11 +43,11 @@ const APP_FILES = [
   './employer/index.html',
   './employer/manifest.json',
   './employer/icon.svg',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js',
-  'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js',
-  'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js'
+  './vendor/leaflet-1.9.4/leaflet.css',
+  './vendor/leaflet-1.9.4/leaflet.js',
+  './vendor/supabase-js-2.45.4/supabase.js',
+  './vendor/qrcode-generator-1.4.4.js',
+  './vendor/jsqr-1.4.0.js'
 ];
 const TILE_LIMIT = 300;
 
