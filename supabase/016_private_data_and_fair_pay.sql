@@ -32,12 +32,13 @@ grant select (id) on public.workers, public.employers to anon, authenticated;
 alter publication supabase_realtime drop table public.workers;
 
 -- Your own profile. Shared phone mode: this phone's profile id first, then your newest.
--- A profile made before accounts existed is found by its device id until claim_profiles claims it.
+-- A profile made before accounts existed is found by its device id until claim_profiles claims it
+-- (never a sample profile: their device ids are public in 001).
 create function public.get_my_worker(p_device text default null) returns setof public.workers
 language sql stable security definer set search_path = '' as $$
   select * from public.workers
    where auth.uid() is not null
-     and (auth_id = auth.uid() or (p_device is not null and device_id = p_device and auth_id is null))
+     and (auth_id = auth.uid() or (p_device is not null and device_id = p_device and auth_id is null and not is_sample))
    order by (device_id = p_device) desc nulls last, updated_at desc
    limit 1
 $$;
@@ -52,13 +53,14 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- The other person on my jobs: phone and UPI ID once matched; the worker's live location
--- only while they are on the way or at work. The job site is already on the booking.
+-- only while they are on the way or at work (a job booked for later: from 2 hours before it starts).
+-- The job site is already on the booking.
 create function public.job_contacts(p_bookings uuid[])
 returns table (booking_id uuid, person_id uuid, phone text, upi_id text, lat double precision, lng double precision)
 language sql stable security definer set search_path = '' as $$
   select b.id, w.id, w.phone, w.upi_id,
-         case when b.status in ('assigned', 'started') then w.lat end,
-         case when b.status in ('assigned', 'started') then w.lng end
+         case when b.status = 'started' or (b.status = 'assigned' and (b.scheduled_for is null or b.scheduled_for <= now() + interval '2 hours')) then w.lat end,
+         case when b.status = 'started' or (b.status = 'assigned' and (b.scheduled_for is null or b.scheduled_for <= now() + interval '2 hours')) then w.lng end
     from public.bookings b join public.workers w on w.id = b.worker_id
    where b.id = any (p_bookings) and public.my_employer(b.employer_id)
   union all
@@ -154,7 +156,9 @@ language sql stable security definer set search_path = '' as $$
 $$;
 
 -- Dispute room: anyone with the link sees the evidence; phone numbers and the exact
--- site and check-in points only for the two people on the job
+-- site and check-in points only for the two people on the job. How far from the site the
+-- worker checked in (start_m, metres) is worked out here from the exact points, so
+-- rounding can't make it look wrong.
 create function public.dispute_evidence(p_booking uuid) returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
 declare b public.bookings; party boolean; j jsonb;
@@ -162,10 +166,13 @@ begin
   select * into b from public.bookings where id = p_booking;
   if b.id is null then return null; end if;
   party := public.my_employer(b.employer_id) or (b.worker_id is not null and public.my_worker(b.worker_id));
-  j := to_jsonb(b) - 'otp';
+  j := (to_jsonb(b) - 'otp') || jsonb_build_object('start_m',
+         case when b.start_lat is not null and b.lat is not null then
+           round(12742000 * asin(sqrt(power(sin(radians(b.start_lat - b.lat) / 2), 2)
+             + cos(radians(b.lat)) * cos(radians(b.start_lat)) * power(sin(radians(b.start_lng - b.lng) / 2), 2))))::int end);
   if not party then
     j := j || jsonb_build_object('lat', round(b.lat::numeric, 2), 'lng', round(b.lng::numeric, 2),
-                                 'start_lat', round(b.start_lat::numeric, 2), 'start_lng', round(b.start_lng::numeric, 2));
+                                 'start_lat', null, 'start_lng', null);
   end if;
   return jsonb_build_object(
     'booking', j,

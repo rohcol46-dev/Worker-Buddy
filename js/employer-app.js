@@ -634,8 +634,10 @@ async function refreshWorkerSpots() {
   }
   const crew = E.crew.filter(onTheWay);
   if (crew.length) {
-    Object.assign(E.crewWorkers, await peopleOn('worker', crew));
-    renderBooking();
+    const fresh = await peopleOn('worker', crew);
+    const changed = Object.keys(fresh).some((id) => JSON.stringify(fresh[id]) !== JSON.stringify(E.crewWorkers[id]));
+    Object.assign(E.crewWorkers, fresh);
+    if (changed) renderBooking(); // re-rendering resets the timers and anything being typed
   }
   loadWorkers();
 }

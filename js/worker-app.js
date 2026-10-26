@@ -11,6 +11,7 @@ const W = {
   requestEmployer: null,
   declined: new Set(),
   countdown: null,
+  requestCheck: null,
   workTimer: null,
   map: null,
   meMarker: null,
@@ -162,6 +163,8 @@ function listen() {
   db.channel('worker-bookings')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => onBookingChange(payload))
     .subscribe();
+  // A later job taken by someone else no longer comes as a live update (only its two people can read it)
+  setInterval(() => { if (!document.hidden) loadLaterJobs(); }, 60000);
   listenMessages((m) => {
     if (m.sender !== 'worker') {
       showToast(`💬 ${t('ph_' + m.phrase)}`);
@@ -332,6 +335,18 @@ async function showRequest(b) {
     if (txt) txt.textContent = Math.ceil(left);
     if (left <= 0) declineRequest();
   }, 250);
+
+  // Once a job is taken or cancelled it is no longer mine to read, so no live update says so: ask every 4 seconds
+  clearInterval(W.requestCheck);
+  W.requestCheck = setInterval(async () => {
+    if (!W.request || W.request.id !== b.id || !navigator.onLine) return;
+    const { data, error } = await db.from('bookings').select('id').eq('id', b.id).eq('status', 'searching').maybeSingle();
+    if (error || data || !W.request || W.request.id !== b.id) return;
+    closeRequest();
+    showToast(t('requestGone'));
+    checkOpenRequests();
+    loadLaterJobs();
+  }, 4000);
 }
 
 // Counter-offer (inDrive): ask for more within the fair range; the employer decides
@@ -349,6 +364,7 @@ async function makeOffer(amount) {
 
 function closeRequest() {
   clearInterval(W.countdown);
+  clearInterval(W.requestCheck);
   W.request = null;
   closeModal('requestModal');
 }

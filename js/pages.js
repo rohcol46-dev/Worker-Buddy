@@ -92,8 +92,8 @@ function evidenceEvents(b) {
   const ev = [[b.created_at, t('ev_posted')]];
   if (b.accepted_at) ev.push([b.accepted_at, tf('ev_accepted', EV.worker ? EV.worker.name : t('worker'))]);
   if (b.started_at) {
-    const km = b.start_lat != null && b.lat != null ? distanceKm({ lat: b.start_lat, lng: b.start_lng }, b) : null;
-    ev.push([b.started_at, km !== null ? tf('ev_startedAt', Math.round(km * 1000)) : t('ev_started')]);
+    // Worked out by the database from the exact points (outsiders only get rounded ones)
+    ev.push([b.started_at, b.start_m != null ? tf('ev_startedAt', b.start_m) : t('ev_started')]);
   }
   if (b.effort_status) {
     ev.push([b.effort_at, `😓 ${t('effortTitle')}: ${effortClaimText(b)} (+₹${b.effort_extra})`]);
