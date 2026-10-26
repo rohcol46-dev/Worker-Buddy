@@ -14,7 +14,7 @@ function trustError(error) {
     return true;
   }
   const keys = { suspended: 'accSuspended', slow_down: 'slowDown', blocked: 'blockedPair', own_job: 'ownJob',
-    finish_jobs_first: 'finishJobsFirst', delete_failed: 'deleteFailed' };
+    finish_jobs_first: 'finishJobsFirst', delete_failed: 'deleteFailed', bad_phone: 'badPhone' };
   if (keys[m]) {
     showToast(t(keys[m]));
     return true;

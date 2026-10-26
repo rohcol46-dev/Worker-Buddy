@@ -88,13 +88,13 @@ function agreedWage(job) {
 
 // "₹650 – ₹800" with each step listed underneath
 function wageBoxHTML(wage) {
-  const sign = (n) => (n >= 0 ? '+' : '−') + '₹' + Math.abs(n);
+  const sign = (n) => (n >= 0 ? '+' : '−') + money(Math.abs(n));
   const lines = wage.parts.map((p, i) => {
     let amount;
-    if (i === 0) amount = `₹${p.min}–${p.max}`;
+    if (i === 0) amount = `${money(p.min)}–${p.max}`;
     else if (p.min === p.max) amount = sign(p.min);
     else amount = `${sign(p.min)} / ${sign(p.max)}`;
     return `<li><span>${p.label}</span><span>${amount}</span></li>`;
   }).join('');
-  return `<div class="wage-total">₹${wage.min} – ₹${wage.max}</div><ul class="wage-parts">${lines}</ul>`;
+  return `<div class="wage-total">${money(wage.min)} – ${money(wage.max)}</div><ul class="wage-parts">${lines}</ul>`;
 }

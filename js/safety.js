@@ -26,7 +26,7 @@ function distanceText(job) {
   const km = distanceKm(App.here, { lat: spot[0], lng: spot[1] });
   if (km < 0.5) return t('nearby');
   const fare = Math.max(5, Math.round(5 + km * 1.5));
-  return `${km.toFixed(1)} km · ~₹${fare} ${t('bus')}`;
+  return `${km.toFixed(1)} km · ~${money(fare)} ${t('bus')}`;
 }
 
 // ---------- Heat alert (free Open-Meteo API, no key) ----------
@@ -147,12 +147,12 @@ function useMyLocation() {
 
 // ---------- SOS ----------
 function saveContact() {
-  Store.set('sosContact', document.getElementById('sosContact').value.replace(/\D/g, ''));
+  Store.set('sosContact', document.getElementById('sosContact').value.trim());
 }
 
 function sendSOS() {
-  const contact = document.getElementById('sosContact').value.replace(/\D/g, '');
-  if (!/^[6-9]\d{9}$/.test(contact)) {
+  const contact = phoneIntl(document.getElementById('sosContact').value);
+  if (!contact) {
     showToast(t('sosNeedContact'));
     document.getElementById('sosContact').focus();
     return;
@@ -160,7 +160,7 @@ function sendSOS() {
   saveContact();
   const send = (link) => {
     const text = T[App.lang].sosMsg(link);
-    window.open(`https://wa.me/91${contact}?text=${encodeURIComponent(text)}`, '_blank');
+    window.open(waHref(contact, text), '_blank');
   };
   if (!navigator.geolocation) return send(null);
   navigator.geolocation.getCurrentPosition(

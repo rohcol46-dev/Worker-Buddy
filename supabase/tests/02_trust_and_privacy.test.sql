@@ -42,9 +42,9 @@ insert into public.admins (auth_id, note) values ('00000000-0000-0000-0000-00000
 
 -- The profile phone is the verified sign-in number; an anonymous account keeps the typed number
 do $$ begin
-  assert (select phone from public.employers where id = '10000000-0000-0000-0000-0000000000e1') = '9800000001', 'employer phone from account';
+  assert (select phone from public.employers where id = '10000000-0000-0000-0000-0000000000e1') = '+919800000001', 'employer phone from account';
   assert (select phone_verified from public.workers where id = '20000000-0000-0000-0000-0000000000a1'), 'worker phone verified';
-  assert (select phone from public.workers where id = '20000000-0000-0000-0000-0000000000a2') = '9111111112', 'anonymous keeps typed phone';
+  assert (select phone from public.workers where id = '20000000-0000-0000-0000-0000000000a2') = '+919111111112', 'anonymous keeps typed phone';
   assert not (select phone_verified from public.workers where id = '20000000-0000-0000-0000-0000000000a2'), 'anonymous not verified';
 end $$;
 

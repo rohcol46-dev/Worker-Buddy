@@ -13,7 +13,7 @@ function jobShareText(b, employerName) {
   return [
     `🧰 ${t('jobPostTitle')}: ${WORK_TYPES[b.type].icon} ${t(b.type)}`,
     `📍 ${b.area}`,
-    `⏱️ ${b.hours} ${t('hoursUnit')} · 💰 ₹${b.agreed_wage} (${t('fairRange')} ₹${b.wage_min}–₹${b.wage_max})`,
+    `⏱️ ${b.hours} ${t('hoursUnit')} · 💰 ${money(b.agreed_wage)} (${t('fairRange')} ${money(b.wage_min)}–${money(b.wage_max)})`,
     b.scheduled_for ? `📅 ${whenText(b)}` : '',
     b.group_size > 1 ? tf('teamJob', b.group_size) : '',
     b.bring_tools ? t('toolsTag') : '',
@@ -56,7 +56,7 @@ function welfareHTML(counts) {
 // ---------- Fair rate card (visible before any job is accepted) ----------
 function openRateCard() {
   const rows = Object.entries(WORK_TYPES).map(([k, w]) =>
-    `<div><span>${w.icon} ${t(k)}</span><span>₹${w.min} – ₹${w.max}</span></div>`).join('');
+    `<div><span>${w.icon} ${t(k)}</span><span>${money(w.min)} – ${money(w.max)}</span></div>`).join('');
   const ruleKeys = ['ruleExtra', 'ruleHalf', 'ruleLoad', 'ruleRisky', 'ruleNight', 'ruleHeat', 'ruleNoCut'];
   const rules = [tf('ruleMin', MIN_WAGE_DAY), ...ruleKeys.map((k) => t(k))].map((r) => `<li>${r}</li>`).join('');
   document.getElementById('slipBody').innerHTML = `
@@ -66,7 +66,7 @@ function openRateCard() {
       <ul class="rules">${rules}</ul>
     </div>`;
   slipShareText = [`📋 Worker Buddy · ${t('rateCardTitle')}`,
-    ...Object.entries(WORK_TYPES).map(([k, w]) => `${t(k)}: ₹${w.min}–₹${w.max}`),
+    ...Object.entries(WORK_TYPES).map(([k, w]) => `${t(k)}: ${money(w.min)}–${money(w.max)}`),
     '• ' + tf('ruleMin', MIN_WAGE_DAY), ...ruleKeys.map((k) => '• ' + t(k))].join('\n');
   document.getElementById('slipModal').classList.add('open');
 }
@@ -126,7 +126,7 @@ function listenVoice(onText) {
   if (!Rec) return showToast(t('noVoiceInput'));
   if (recognizer) recognizer.abort();
   recognizer = new Rec();
-  recognizer.lang = SPEECH_LANG[App.lang] || 'en-IN';
+  recognizer.lang = localeTag();
   recognizer.interimResults = false;
   recognizer.maxAlternatives = 1;
   const btn = document.getElementById('micBtn');
@@ -150,8 +150,8 @@ function handleVoice(text) {
 
 // ---------- Text ----------
 Object.assign(T.en, {
-  bookNow: (w) => `Post job · ₹${w}`,
-  bookTeam: (n, w) => `Post job for ${n} workers · ₹${w} total`,
+  bookNow: (w) => `Post job · ${money(w)}`,
+  bookTeam: (n, w) => `Post job for ${n} workers · ${money(w)} total`,
   shareJobWa: '📲 Share job on WhatsApp',
   jobPostTitle: 'Job on Worker Buddy',
   fairRange: 'fair range',
@@ -179,7 +179,7 @@ Object.assign(T.en, {
   heatSaved: 'Heat report saved in your record.',
   rateCard: '📋 Fair rate card',
   rateCardTitle: 'Fair rate card (8-hour day)',
-  ruleMin: (n) => `Never below the legal minimum wage: ₹${n} for an 8-hour day (Tamil Nadu)`,
+  ruleMin: (n) => `Never below the legal minimum wage: ${money(n)} for an 8-hour day (Tamil Nadu)`,
   ruleExtra: 'Each hour after 8 hours is paid double: twice the hourly rate (overtime is added automatically)',
   ruleHalf: 'Shorter jobs are paid by the hour, never below half a day',
   ruleLoad: 'Heavier work: +₹50 (medium) or +₹100 (heavy)',
@@ -192,8 +192,8 @@ Object.assign(T.en, {
 });
 
 Object.assign(T.ta, {
-  bookNow: (w) => `வேலையைப் பதிவிடு · ₹${w}`,
-  bookTeam: (n, w) => `${n} வேலையாட்களுக்கு பதிவிடு · மொத்தம் ₹${w}`,
+  bookNow: (w) => `வேலையைப் பதிவிடு · ${money(w)}`,
+  bookTeam: (n, w) => `${n} வேலையாட்களுக்கு பதிவிடு · மொத்தம் ${money(w)}`,
   shareJobWa: '📲 வாட்ஸ்அப்பில் வேலையைப் பகிர்',
   jobPostTitle: 'Worker Buddy வேலை',
   fairRange: 'நியாயமான வரம்பு',
@@ -221,7 +221,7 @@ Object.assign(T.ta, {
   heatSaved: 'வெப்ப அறிக்கை உங்கள் பதிவில் சேமிக்கப்பட்டது.',
   rateCard: '📋 நியாயமான கூலி அட்டை',
   rateCardTitle: 'நியாயமான கூலி அட்டை (8 மணி நேர நாள்)',
-  ruleMin: (n) => `சட்டப்படி குறைந்தபட்ச கூலிக்குக் கீழே இல்லை: 8 மணி நேர நாளுக்கு ₹${n} (தமிழ்நாடு)`,
+  ruleMin: (n) => `சட்டப்படி குறைந்தபட்ச கூலிக்குக் கீழே இல்லை: 8 மணி நேர நாளுக்கு ${money(n)} (தமிழ்நாடு)`,
   ruleExtra: '8 மணி நேரத்துக்கு மேல் ஒவ்வொரு மணிக்கும் இரட்டிப்பு கூலி: மணிக் கூலியின் இரண்டு மடங்கு (கூடுதல் நேரம் தானாகச் சேரும்)',
   ruleHalf: 'குறைந்த நேர வேலைக்கு மணிக்கணக்கில், அரை நாளுக்குக் குறையாமல்',
   ruleLoad: 'கடினமான வேலை: +₹50 (நடுத்தரம்) அல்லது +₹100 (கனமானது)',
@@ -234,8 +234,8 @@ Object.assign(T.ta, {
 });
 
 Object.assign(T.hi, {
-  bookNow: (w) => `काम पोस्ट करें · ₹${w}`,
-  bookTeam: (n, w) => `${n} मज़दूरों के लिए पोस्ट करें · कुल ₹${w}`,
+  bookNow: (w) => `काम पोस्ट करें · ${money(w)}`,
+  bookTeam: (n, w) => `${n} मज़दूरों के लिए पोस्ट करें · कुल ${money(w)}`,
   shareJobWa: '📲 व्हाट्सऐप पर काम भेजें',
   jobPostTitle: 'Worker Buddy पर काम',
   fairRange: 'सही सीमा',
@@ -263,7 +263,7 @@ Object.assign(T.hi, {
   heatSaved: 'गर्मी की रिपोर्ट आपके रिकॉर्ड में सेव हो गई।',
   rateCard: '📋 सही मज़दूरी कार्ड',
   rateCardTitle: 'सही मज़दूरी कार्ड (8 घंटे का दिन)',
-  ruleMin: (n) => `कानूनी न्यूनतम मज़दूरी से कम कभी नहीं: 8 घंटे के दिन के ₹${n} (तमिलनाडु)`,
+  ruleMin: (n) => `कानूनी न्यूनतम मज़दूरी से कम कभी नहीं: 8 घंटे के दिन के ${money(n)} (तमिलनाडु)`,
   ruleExtra: '8 घंटे के बाद हर घंटे दोगुनी मज़दूरी: घंटे की दर का दो गुना (ओवरटाइम अपने आप जुड़ता है)',
   ruleHalf: 'छोटे काम घंटे के हिसाब से, आधे दिन से कम नहीं',
   ruleLoad: 'भारी काम: +₹50 (मध्यम) या +₹100 (भारी)',

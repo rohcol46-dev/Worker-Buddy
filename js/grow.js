@@ -83,7 +83,7 @@ function nextDays(n) {
   return Array.from({ length: n }, (_, i) => dayFromToday(i));
 }
 function dayLabel(iso) {
-  return new Date(iso + 'T12:00:00').toLocaleDateString(App.lang === 'en' ? 'en-IN' : App.lang + '-IN', { weekday: 'short', day: 'numeric' });
+  return new Date(iso + 'T12:00:00').toLocaleDateString(localeTag(), { weekday: 'short', day: 'numeric' });
 }
 function availabilityHTML(days) {
   return `
@@ -145,7 +145,7 @@ async function renderCrewBook() {
     const wk = crewWeek(m);
     return `
       <div class="mini-card crew-member">
-        <div><b>${esc(m.name)}</b> · ₹${m.daily_wage}/${t('dayUnit')}<br>
+        <div><b>${esc(m.name)}</b> · ${money(m.daily_wage)}/${t('dayUnit')}<br>
           <span class="muted small">${tf('crewWeekLine', wk.days, wk.owed)}</span></div>
         <div class="actions">
           <button class="btn ${here ? 'btn-accept' : 'btn-light'} btn-small" onclick="markPresent(${m.id}, ${!here})">${here ? '✅ ' + t('present') : t('markPresent')}</button>
@@ -166,7 +166,7 @@ async function renderCrewBook() {
     <form class="card form" onsubmit="addMember(event)">
       <b>${t('addMember')}</b>
       <label><span>${t('memberName')}</span><input name="name" required maxlength="60"></label>
-      <label><span>${t('memberPhone')}</span><input name="phone" type="tel" inputmode="numeric" maxlength="10" pattern="[6-9][0-9]{9}"></label>
+      <label><span>${t('memberPhone')}</span><input name="phone" type="tel" inputmode="tel" maxlength="20" placeholder="${attr(myCountry().phone_example)}"></label>
       <label><span>${t('dailyWage')}</span><input name="wage" type="number" inputmode="numeric" min="100" max="5000" required value="600"></label>
       <button class="btn btn-primary btn-block" type="submit">+ ${t('addMember')}</button>
     </form>`;
@@ -176,7 +176,8 @@ async function addMember(event) {
   event.preventDefault();
   const f = event.target;
   if (!navigator.onLine) return showToast(t('offlineBanner'));
-  const row = { leader_id: W.me.id, name: f.name.value.trim(), phone: f.phone.value.replace(/\D/g, '') || null, daily_wage: parseInt(f.wage.value, 10) };
+  const row = { leader_id: W.me.id, name: f.name.value.trim(), phone: f.phone.value.trim() ? phoneIntl(f.phone.value) : null, daily_wage: parseInt(f.wage.value, 10) };
+  if (f.phone.value.trim() && !row.phone) return showToast(t('badPhone'));
   const { error } = await db.from('crew_members').insert(row);
   if (error) return showToast(t('saveError'));
   renderCrewBook();
@@ -207,15 +208,15 @@ async function payCrewWeek(id) {
     `${t('worker')}: ${m.name}`,
     `${t('crewLeader')}: ${W.me.name} · ${W.me.phone}`,
     `${t('daysPaid')}: ${wk.unpaidDays.length} (${wk.unpaidDays.map(dayLabel).join(', ')})`,
-    `${t('dailyWage')}: ₹${m.daily_wage}`,
-    `${t('totalPaid')}: ₹${wk.owed}`,
+    `${t('dailyWage')}: ${money(m.daily_wage)}`,
+    `${t('totalPaid')}: ${money(wk.owed)}`,
     `${t('paidOn')}: ${fmtDateTime(new Date().toISOString())}`
   ];
   slipShareText = lines.join('\n');
   document.getElementById('slipBody').innerHTML = `
     <div class="slip" id="slipPrint">
       <div class="slip-head"><b>🤝 Worker Buddy</b><span>${t('crewSlip')}</span></div>
-      <div class="slip-amount">₹${wk.owed}</div>
+      <div class="slip-amount">${money(wk.owed)}</div>
       <div class="agreement">${lines.slice(1).map((l) => { const [k, ...v] = l.split(': '); return `<div><span>${esc(k)}</span><span>${esc(v.join(': '))}</span></div>`; }).join('')}</div>
     </div>`;
   const sms = document.getElementById('slipSms');
@@ -258,20 +259,20 @@ function openMonthlyReport(records, me) {
   const showups = records.filter((b) => b.showup_paid_at && Date.parse(b.showup_paid_at) >= start);
   const total = paid.reduce((s, b) => s + amountOf(b), 0) + showups.reduce((s, b) => s + b.showup_pay, 0);
   const rows = paid.map((b) => `<tr><td>${fmtDateTime(b.paid_at)}</td><td>${t(b.type)}${b.worker ? ' · ' + esc(b.worker.name) : ''}</td>
-    <td>${esc(b.receipt_no || '—')}</td><td class="num">₹${amountOf(b)}</td></tr>`).join('') +
-    showups.map((b) => `<tr><td>${fmtDateTime(b.showup_paid_at)}</td><td>${t('showupLabel')}</td><td>—</td><td class="num">₹${b.showup_pay}</td></tr>`).join('');
-  const month = now.toLocaleDateString(App.lang === 'en' ? 'en-IN' : App.lang + '-IN', { month: 'long', year: 'numeric' });
+    <td>${esc(b.receipt_no || '—')}</td><td class="num">${money(amountOf(b))}</td></tr>`).join('') +
+    showups.map((b) => `<tr><td>${fmtDateTime(b.showup_paid_at)}</td><td>${t('showupLabel')}</td><td>—</td><td class="num">${money(b.showup_pay)}</td></tr>`).join('');
+  const month = now.toLocaleDateString(localeTag(), { month: 'long', year: 'numeric' });
   document.getElementById('slipBody').innerHTML = `
     <div class="slip" id="slipPrint">
       <div class="slip-head"><b>🤝 Worker Buddy</b><span>${t('reportTitle')} · ${month}</span></div>
       <p><b>${esc(me.name)}</b>${me.gstin ? ` · GST ${esc(me.gstin)}` : ''}</p>
-      <table class="statement"><thead><tr><th>${t('paidOn')}</th><th>${t('work')}</th><th>${t('receiptNo')}</th><th class="num">₹</th></tr></thead>
+      <table class="statement"><thead><tr><th>${t('paidOn')}</th><th>${t('work')}</th><th>${t('receiptNo')}</th><th class="num">${moneySign()}</th></tr></thead>
         <tbody>${rows || `<tr><td colspan="4">${t('noSlips')}</td></tr>`}</tbody></table>
-      <div class="agreement"><div><span><b>${t('reportTotal')}</b></span><span><b>₹${total}</b></span></div>
+      <div class="agreement"><div><span><b>${t('reportTotal')}</b></span><span><b>${money(total)}</b></span></div>
         <div><span>${t('reportJobs')}</span><span>${paid.length}</span></div></div>
       <p class="muted small">${t('printedOn')}: ${fmtDateTime(new Date().toISOString())}</p>
     </div>`;
-  slipShareText = `${t('reportTitle')} ${month}: ₹${total} (${paid.length} ${t('reportJobs').toLowerCase()})`;
+  slipShareText = `${t('reportTitle')} ${month}: ${money(total)} (${paid.length} ${t('reportJobs').toLowerCase()})`;
   document.getElementById('slipModal').classList.add('open');
 }
 
@@ -400,15 +401,15 @@ Object.assign(T.en, {
   crewTitle: 'My crew (mestri)',
   crewHint: 'Mark who came each day. Weekly pay is worked out, and each member gets a pay slip by SMS or WhatsApp.',
   crewToday: (a, n) => `Today: ${a} of ${n} present`,
-  crewOwed: (n) => `To pay this week: ₹${n}`,
-  crewWeekLine: (d, o) => `${d} day${d === 1 ? '' : 's'} this week · to pay ₹${o}`,
+  crewOwed: (n) => `To pay this week: ${money(n)}`,
+  crewWeekLine: (d, o) => `${d} day${d === 1 ? '' : 's'} this week · to pay ${money(o)}`,
   crewEmpty: 'No crew members yet. Add them below.',
   addMember: 'Add crew member',
-  dailyWage: 'Daily wage (₹)',
+  dailyWage: 'Daily wage',
   dayUnit: 'day',
   present: 'Present',
   markPresent: 'Mark present',
-  payWeek: (n) => `Pay ₹${n}`,
+  payWeek: (n) => `Pay ${money(n)}`,
   removeMemberConfirm: 'Remove this crew member?',
   crewSlip: 'Crew pay slip',
   memberName: 'Member’s name',
@@ -473,15 +474,15 @@ Object.assign(T.ta, {
   crewTitle: 'என் குழு (மேஸ்திரி)',
   crewHint: 'ஒவ்வொரு நாளும் யார் வந்தார் என்று குறியுங்கள். வாரக் கூலி கணக்கிடப்படும், ஒவ்வொருவருக்கும் SMS அல்லது வாட்ஸ்அப்பில் சம்பளச் சீட்டு.',
   crewToday: (a, n) => `இன்று: ${n} இல் ${a} பேர் வந்தனர்`,
-  crewOwed: (n) => `இந்த வாரம் கொடுக்க வேண்டியது: ₹${n}`,
-  crewWeekLine: (d, o) => `இந்த வாரம் ${d} நாள் · கொடுக்க ₹${o}`,
+  crewOwed: (n) => `இந்த வாரம் கொடுக்க வேண்டியது: ${money(n)}`,
+  crewWeekLine: (d, o) => `இந்த வாரம் ${d} நாள் · கொடுக்க ${money(o)}`,
   crewEmpty: 'இன்னும் குழு உறுப்பினர்கள் இல்லை. கீழே சேருங்கள்.',
   addMember: 'குழு உறுப்பினரைச் சேர்',
-  dailyWage: 'தினக் கூலி (₹)',
+  dailyWage: 'தினக் கூலி',
   dayUnit: 'நாள்',
   present: 'வந்தார்',
   markPresent: 'வருகை குறி',
-  payWeek: (n) => `₹${n} கொடு`,
+  payWeek: (n) => `${money(n)} கொடு`,
   removeMemberConfirm: 'இந்த உறுப்பினரை நீக்கவா?',
   crewSlip: 'குழு சம்பளச் சீட்டு',
   memberName: 'உறுப்பினர் பெயர்',
@@ -546,15 +547,15 @@ Object.assign(T.hi, {
   crewTitle: 'मेरी टीम (मिस्त्री/ठेकेदार)',
   crewHint: 'हर दिन कौन आया, लगाएँ। हफ़्ते की मज़दूरी गिनी जाती है, और हर सदस्य को SMS या व्हाट्सऐप पर पे स्लिप।',
   crewToday: (a, n) => `आज: ${n} में से ${a} आए`,
-  crewOwed: (n) => `इस हफ़्ते देना है: ₹${n}`,
-  crewWeekLine: (d, o) => `इस हफ़्ते ${d} दिन · देना ₹${o}`,
+  crewOwed: (n) => `इस हफ़्ते देना है: ${money(n)}`,
+  crewWeekLine: (d, o) => `इस हफ़्ते ${d} दिन · देना ${money(o)}`,
   crewEmpty: 'अभी टीम में कोई नहीं। नीचे जोड़ें।',
   addMember: 'टीम सदस्य जोड़ें',
-  dailyWage: 'रोज़ की मज़दूरी (₹)',
+  dailyWage: 'रोज़ की मज़दूरी',
   dayUnit: 'दिन',
   present: 'आया',
   markPresent: 'हाज़िरी लगाएँ',
-  payWeek: (n) => `₹${n} दें`,
+  payWeek: (n) => `${money(n)} दें`,
   removeMemberConfirm: 'इस सदस्य को हटाएँ?',
   crewSlip: 'टीम पे स्लिप',
   memberName: 'सदस्य का नाम',

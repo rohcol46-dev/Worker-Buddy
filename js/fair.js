@@ -59,7 +59,7 @@ function approvedMaterials() {
 // me = 'worker' (adds items) or 'employer' (approves them)
 function materialsHTML(me, status) {
   const rows = Mat.list.map((m) => `
-    <li><span>${esc(m.item)} · <b>₹${m.amount}</b></span>
+    <li><span>${esc(m.item)} · <b>${money(m.amount)}</b></span>
       ${m.status === 'pending' && me === 'employer'
         ? `<span><button class="btn btn-accept btn-small" onclick="decideMaterial(${m.id}, true)">✓</button>
            <button class="btn btn-light btn-small" onclick="decideMaterial(${m.id}, false)">✕</button></span>`
@@ -74,7 +74,7 @@ function materialsHTML(me, status) {
       ${approvedMaterials() ? `<p class="small">${tf('materialsApproved', approvedMaterials())}</p>` : ''}
       ${canAdd ? `<form class="row mat-form" onsubmit="addMaterial(event)">
         <input name="item" class="input" maxlength="60" required placeholder="${attr(t('materialItemPh'))}">
-        <input name="amount" class="input mat-amount" type="number" inputmode="numeric" min="1" max="20000" required placeholder="₹">
+        <input name="amount" class="input mat-amount" type="number" inputmode="numeric" min="1" max="20000" required placeholder="${moneySign()}">
         <button class="btn btn-dark btn-small" type="submit">+</button>
       </form>` : ''}
     </div>`;
@@ -202,7 +202,7 @@ async function showPayQR(b, amount) {
   document.getElementById('qrBody').innerHTML = `
     <h3>📱 ${t('qrPayTitle')}</h3>
     <div class="qr-box">${svg || `<p class="muted">${t('qrNoLib')}</p>`}</div>
-    <p class="request-pay center">₹${amount}</p>
+    <p class="request-pay center">${money(amount)}</p>
     <p class="muted small">${t('qrPayHint')}</p>
     <p class="small center">${t('qrBackup')}: <b class="code">${code}</b></p>`;
   m.classList.add('open');
@@ -218,7 +218,7 @@ async function scanPayQR(onText) {
     <p class="muted small">${t('qrScanHint')}</p>
     <form class="row" onsubmit="event.preventDefault(); typedQR(this.code.value, this.amount.value)">
       <input name="code" class="input" maxlength="10" required placeholder="${attr(t('qrTypeCode'))}">
-      <input name="amount" class="input mat-amount" type="number" inputmode="numeric" required placeholder="₹">
+      <input name="amount" class="input mat-amount" type="number" inputmode="numeric" required placeholder="${moneySign()}">
       <button class="btn btn-dark btn-small" type="submit">OK</button>
     </form>`;
   m.classList.add('open');
@@ -267,9 +267,9 @@ function smsLink(phone, text) {
 
 // ---------- Text ----------
 Object.assign(T.en, {
-  showupOwed: (n) => `⚠️ Show-up pay owed to the worker: ₹${n}`,
-  showupPaid: (n) => `✅ Show-up pay ₹${n} paid`,
-  payShowup: (n) => `Pay ₹${n} show-up pay`,
+  showupOwed: (n) => `⚠️ Show-up pay owed to the worker: ${money(n)}`,
+  showupPaid: (n) => `✅ Show-up pay ${money(n)} paid`,
+  payShowup: (n) => `Pay ${money(n)} show-up pay`,
   showupBlock: 'Please pay the show-up pay you owe before posting a new job.',
   cancelAssignedWarn: 'The worker has already set off. Cancelling now means ₹100 show-up pay for them. Cancel?',
   showupForWorker: 'The employer cancelled after you set off. You are owed ₹100 show-up pay.',
@@ -285,14 +285,14 @@ Object.assign(T.en, {
   qrTypeCode: 'Or type the 10-letter code',
   qrNoCamera: 'Camera not available. Type the code shown under the QR.',
   qrWrong: 'This QR is not for this job, or the code is wrong.',
-  qrOk: (n) => `✅ ₹${n} received, proven by QR. Pay slip created.`,
+  qrOk: (n) => `✅ ${money(n)} received, proven by QR. Pay slip created.`,
   qrSavedOffline: 'Saved. The pay slip will be confirmed when the internet is back.',
   travelPay: 'Travel allowance',
   travelNote: 'Workers coming from more than 5 km get a travel allowance (₹50, +₹10 per km, up to ₹150).',
-  travelTag: (n) => `🚌 +₹${n} travel`,
+  travelTag: (n) => `🚌 +${money(n)} travel`,
   rainStop: '🌧️ Rain stopped the work',
   rainConfirm: 'Stop work because of rain? The worker is paid for the time worked, at least half the wage.',
-  rainNote: (n) => `🌧️ Rain-off: paid for time worked, at least half the wage (₹${n})`,
+  rainNote: (n) => `🌧️ Rain-off: paid for time worked, at least half the wage (${money(n)})`,
   rainLabel: 'Rain-off pay',
   bringTools: '🧰 Worker brings own tools (+₹50)',
   toolsExtra: 'Own tools',
@@ -304,16 +304,16 @@ Object.assign(T.en, {
   materialsTitle: 'Materials bought by the worker',
   materialsHint: 'Bought parts or materials with your own money? Add them here to get repaid.',
   materialItemPh: 'Item, e.g. PVC pipe',
-  materialsApproved: (n) => `Approved: ₹${n}, repaid with the wage`,
+  materialsApproved: (n) => `Approved: ${money(n)}, repaid with the wage`,
   mat_pending: 'Waiting', mat_approved: 'Approved', mat_rejected: 'Not approved',
   materialsLabel: 'Materials repaid',
   smsSlip: '📩 Send by SMS'
 });
 
 Object.assign(T.ta, {
-  showupOwed: (n) => `⚠️ வேலையாளுக்கு வர வேண்டிய வருகைக் கூலி: ₹${n}`,
-  showupPaid: (n) => `✅ வருகைக் கூலி ₹${n} கொடுக்கப்பட்டது`,
-  payShowup: (n) => `₹${n} வருகைக் கூலி கொடு`,
+  showupOwed: (n) => `⚠️ வேலையாளுக்கு வர வேண்டிய வருகைக் கூலி: ${money(n)}`,
+  showupPaid: (n) => `✅ வருகைக் கூலி ${money(n)} கொடுக்கப்பட்டது`,
+  payShowup: (n) => `${money(n)} வருகைக் கூலி கொடு`,
   showupBlock: 'புதிய வேலை பதிவிடும் முன் நீங்கள் தர வேண்டிய வருகைக் கூலியைக் கொடுங்கள்.',
   cancelAssignedWarn: 'வேலையாள் ஏற்கனவே கிளம்பிவிட்டார். இப்போது ரத்து செய்தால் அவருக்கு ₹100 வருகைக் கூலி. ரத்து செய்யவா?',
   showupForWorker: 'நீங்கள் கிளம்பிய பிறகு முதலாளி ரத்து செய்தார். உங்களுக்கு ₹100 வருகைக் கூலி வர வேண்டும்.',
@@ -329,14 +329,14 @@ Object.assign(T.ta, {
   qrTypeCode: 'அல்லது 10 எழுத்துக் குறியீட்டை டைப் செய்',
   qrNoCamera: 'கேமரா இல்லை. QR கீழே உள்ள குறியீட்டை டைப் செய்யுங்கள்.',
   qrWrong: 'இந்த QR இந்த வேலைக்கானது அல்ல, அல்லது குறியீடு தவறு.',
-  qrOk: (n) => `✅ ₹${n} கிடைத்தது, QR மூலம் உறுதி. சம்பளச் சீட்டு உருவானது.`,
+  qrOk: (n) => `✅ ${money(n)} கிடைத்தது, QR மூலம் உறுதி. சம்பளச் சீட்டு உருவானது.`,
   qrSavedOffline: 'சேமிக்கப்பட்டது. இணையம் வந்ததும் சம்பளச் சீட்டு உறுதியாகும்.',
   travelPay: 'பயணப் படி',
   travelNote: '5 கி.மீக்கு மேல் தூரத்திலிருந்து வரும் வேலையாட்களுக்கு பயணப் படி (₹50, ஒவ்வொரு கி.மீக்கும் +₹10, அதிகபட்சம் ₹150).',
-  travelTag: (n) => `🚌 +₹${n} பயணம்`,
+  travelTag: (n) => `🚌 +${money(n)} பயணம்`,
   rainStop: '🌧️ மழையால் வேலை நின்றது',
   rainConfirm: 'மழையால் வேலையை நிறுத்தவா? செய்த நேரத்துக்கு, குறைந்தது பாதி கூலி வேலையாளுக்குக் கிடைக்கும்.',
-  rainNote: (n) => `🌧️ மழை நிறுத்தம்: செய்த நேரத்துக்கு, குறைந்தது பாதி கூலி (₹${n})`,
+  rainNote: (n) => `🌧️ மழை நிறுத்தம்: செய்த நேரத்துக்கு, குறைந்தது பாதி கூலி (${money(n)})`,
   rainLabel: 'மழை நிறுத்தக் கூலி',
   bringTools: '🧰 வேலையாள் சொந்த கருவிகள் கொண்டு வருவார் (+₹50)',
   toolsExtra: 'சொந்த கருவிகள்',
@@ -348,16 +348,16 @@ Object.assign(T.ta, {
   materialsTitle: 'வேலையாள் வாங்கிய பொருட்கள்',
   materialsHint: 'உங்கள் பணத்தில் பொருட்கள் வாங்கினீர்களா? திரும்பப் பெற இங்கே சேருங்கள்.',
   materialItemPh: 'பொருள், எ.கா. PVC பைப்',
-  materialsApproved: (n) => `ஒப்புதல்: ₹${n}, கூலியுடன் திருப்பித் தரப்படும்`,
+  materialsApproved: (n) => `ஒப்புதல்: ${money(n)}, கூலியுடன் திருப்பித் தரப்படும்`,
   mat_pending: 'காத்திருக்கிறது', mat_approved: 'ஒப்புதல்', mat_rejected: 'ஒப்புதல் இல்லை',
   materialsLabel: 'பொருள் திருப்பம்',
   smsSlip: '📩 SMS ஆக அனுப்பு'
 });
 
 Object.assign(T.hi, {
-  showupOwed: (n) => `⚠️ मज़दूर को आने का पैसा देना बाकी: ₹${n}`,
-  showupPaid: (n) => `✅ आने का पैसा ₹${n} दिया गया`,
-  payShowup: (n) => `₹${n} आने का पैसा दें`,
+  showupOwed: (n) => `⚠️ मज़दूर को आने का पैसा देना बाकी: ${money(n)}`,
+  showupPaid: (n) => `✅ आने का पैसा ${money(n)} दिया गया`,
+  payShowup: (n) => `${money(n)} आने का पैसा दें`,
   showupBlock: 'नया काम पोस्ट करने से पहले बाकी आने का पैसा दें।',
   cancelAssignedWarn: 'मज़दूर निकल चुका है। अभी रद्द करने पर उसे ₹100 आने का पैसा मिलेगा। रद्द करें?',
   showupForWorker: 'आपके निकलने के बाद मालिक ने रद्द किया। आपको ₹100 आने का पैसा मिलना है।',
@@ -373,14 +373,14 @@ Object.assign(T.hi, {
   qrTypeCode: 'या 10 अक्षर का कोड लिखें',
   qrNoCamera: 'कैमरा नहीं चला। QR के नीचे का कोड लिखें।',
   qrWrong: 'यह QR इस काम का नहीं है, या कोड गलत है।',
-  qrOk: (n) => `✅ ₹${n} मिला, QR से पक्का। पे स्लिप बन गई।`,
+  qrOk: (n) => `✅ ${money(n)} मिला, QR से पक्का। पे स्लिप बन गई।`,
   qrSavedOffline: 'सेव हो गया। इंटरनेट आने पर पे स्लिप पक्की होगी।',
   travelPay: 'आने-जाने का भत्ता',
   travelNote: '5 किमी से ज़्यादा दूर से आने वाले मज़दूर को भत्ता (₹50, हर किमी +₹10, ज़्यादा से ज़्यादा ₹150)।',
-  travelTag: (n) => `🚌 +₹${n} भत्ता`,
+  travelTag: (n) => `🚌 +${money(n)} भत्ता`,
   rainStop: '🌧️ बारिश से काम रुका',
   rainConfirm: 'बारिश से काम रोकें? मज़दूर को किए गए समय का, कम से कम आधी मज़दूरी मिलेगी।',
-  rainNote: (n) => `🌧️ बारिश से रुका: किए गए समय का, कम से कम आधी मज़दूरी (₹${n})`,
+  rainNote: (n) => `🌧️ बारिश से रुका: किए गए समय का, कम से कम आधी मज़दूरी (${money(n)})`,
   rainLabel: 'बारिश वाला पैसा',
   bringTools: '🧰 मज़दूर अपने औज़ार लाएगा (+₹50)',
   toolsExtra: 'अपने औज़ार',
@@ -392,7 +392,7 @@ Object.assign(T.hi, {
   materialsTitle: 'मज़दूर का खरीदा सामान',
   materialsHint: 'अपने पैसे से सामान खरीदा? वापस पाने के लिए यहाँ जोड़ें।',
   materialItemPh: 'सामान, जैसे PVC पाइप',
-  materialsApproved: (n) => `मंज़ूर: ₹${n}, मज़दूरी के साथ वापस`,
+  materialsApproved: (n) => `मंज़ूर: ${money(n)}, मज़दूरी के साथ वापस`,
   mat_pending: 'इंतज़ार', mat_approved: 'मंज़ूर', mat_rejected: 'नामंज़ूर',
   materialsLabel: 'सामान का पैसा',
   smsSlip: '📩 SMS से भेजें'
@@ -408,12 +408,12 @@ Object.assign(T.en, {
   effortSend: 'Tell the employer',
   effortNothing: 'Pick what the work really is',
   effortWas: (real, posted) => `Really ${real.toLowerCase()}, posted as ${posted.toLowerCase()}`,
-  effortFair: (n) => `Fair extra by the wage rules: +₹${n}`,
-  effortAccept: (n) => `Accept +₹${n}`,
+  effortFair: (n) => `Fair extra by the wage rules: +${money(n)}`,
+  effortAccept: (n) => `Accept +${money(n)}`,
   effortRefuse: 'Refuse',
-  effortWaiting: (n) => `Asked the employer for +₹${n}. Payment waits for their answer.`,
-  effortAccepted: (n) => `+₹${n} added for harder work`,
-  effortRefused: (n) => `The employer refused +₹${n} for harder work. This shows on their profile.`,
+  effortWaiting: (n) => `Asked the employer for +${money(n)}. Payment waits for their answer.`,
+  effortAccepted: (n) => `+${money(n)} added for harder work`,
+  effortRefused: (n) => `The employer refused +${money(n)} for harder work. This shows on their profile.`,
   effortRefusedToast: 'Refused. Workers will see this on your profile.',
   effortPayFirst: 'Answer the worker\'s harder-work request first',
   effortRefusedCount: (n) => `😓 Refused harder-work pay ${n}×`
@@ -427,12 +427,12 @@ Object.assign(T.ta, {
   effortSend: 'முதலாளிக்கு சொல்',
   effortNothing: 'வேலை உண்மையில் எப்படி என்று தேர்வு செய்யவும்',
   effortWas: (real, posted) => `உண்மையில் ${real}, பதிவில் ${posted}`,
-  effortFair: (n) => `கூலி விதிப்படி நியாயமான கூடுதல்: +₹${n}`,
-  effortAccept: (n) => `+₹${n} ஏற்கவும்`,
+  effortFair: (n) => `கூலி விதிப்படி நியாயமான கூடுதல்: +${money(n)}`,
+  effortAccept: (n) => `+${money(n)} ஏற்கவும்`,
   effortRefuse: 'மறு',
-  effortWaiting: (n) => `முதலாளியிடம் +₹${n} கேட்கப்பட்டது. பதில் வந்த பின் கூலி.`,
-  effortAccepted: (n) => `கடின வேலைக்கு +₹${n} சேர்க்கப்பட்டது`,
-  effortRefused: (n) => `கடின வேலைக்கான +₹${n} மறுக்கப்பட்டது. இது முதலாளி சுயவிவரத்தில் தெரியும்.`,
+  effortWaiting: (n) => `முதலாளியிடம் +${money(n)} கேட்கப்பட்டது. பதில் வந்த பின் கூலி.`,
+  effortAccepted: (n) => `கடின வேலைக்கு +${money(n)} சேர்க்கப்பட்டது`,
+  effortRefused: (n) => `கடின வேலைக்கான +${money(n)} மறுக்கப்பட்டது. இது முதலாளி சுயவிவரத்தில் தெரியும்.`,
   effortRefusedToast: 'மறுக்கப்பட்டது. வேலையாட்கள் இதை உங்கள் சுயவிவரத்தில் பார்ப்பார்கள்.',
   effortPayFirst: 'முதலில் வேலையாளின் கடின வேலை கோரிக்கைக்கு பதில் சொல்லவும்',
   effortRefusedCount: (n) => `😓 கடின வேலை கூலி ${n} முறை மறுப்பு`
@@ -446,12 +446,12 @@ Object.assign(T.hi, {
   effortSend: 'मालिक को बताएँ',
   effortNothing: 'चुनें कि काम असल में कैसा है',
   effortWas: (real, posted) => `असल में ${real}, बताया ${posted}`,
-  effortFair: (n) => `मज़दूरी नियम से सही अतिरिक्त: +₹${n}`,
-  effortAccept: (n) => `+₹${n} मानें`,
+  effortFair: (n) => `मज़दूरी नियम से सही अतिरिक्त: +${money(n)}`,
+  effortAccept: (n) => `+${money(n)} मानें`,
   effortRefuse: 'मना करें',
-  effortWaiting: (n) => `मालिक से +₹${n} माँगा। जवाब के बाद भुगतान होगा।`,
-  effortAccepted: (n) => `कठिन काम के लिए +₹${n} जोड़ा गया`,
-  effortRefused: (n) => `मालिक ने कठिन काम के +₹${n} मना किए। यह उनकी प्रोफ़ाइल पर दिखेगा।`,
+  effortWaiting: (n) => `मालिक से +${money(n)} माँगा। जवाब के बाद भुगतान होगा।`,
+  effortAccepted: (n) => `कठिन काम के लिए +${money(n)} जोड़ा गया`,
+  effortRefused: (n) => `मालिक ने कठिन काम के +${money(n)} मना किए। यह उनकी प्रोफ़ाइल पर दिखेगा।`,
   effortRefusedToast: 'मना किया। मज़दूर इसे आपकी प्रोफ़ाइल पर देखेंगे।',
   effortPayFirst: 'पहले मज़दूर की कठिन काम वाली माँग का जवाब दें',
   effortRefusedCount: (n) => `😓 कठिन काम का पैसा ${n} बार मना किया`
@@ -497,44 +497,44 @@ function showUpiQR(b, worker, amount) {
   document.getElementById('qrBody').innerHTML = `
     <h3>📲 ${t('upiQrTitle')}</h3>
     <div class="qr-box qr-upi">${svg || `<p class="muted">${t('qrNoLib')}</p>`}</div>
-    <p class="request-pay center">₹${amount}</p>
+    <p class="request-pay center">${money(amount)}</p>
     <p class="center"><b>${esc(worker.name || '')}</b><br><span class="code">${esc(worker.upi_id)}</span></p>
     <p class="muted small center">${t('upiQrHint')}</p>`;
   document.getElementById('qrModal').classList.add('open');
 }
 Object.assign(T.en, {
   upiIdLabel: 'UPI ID (to get paid in your bank)',
-  upiPayBtn: (n) => `📲 Pay ₹${n} with UPI app`,
+  upiPayBtn: (n) => `📲 Pay ${money(n)} with UPI app`,
   upiHint: (id) => `Opens GPay, PhonePe or Paytm with ${id}. After paying, tap "Pay and finish".`,
   upiMissing: 'This worker has not added a UPI ID. Pay in cash, then tap "Pay and finish".',
   upiQrBtn: '🔳 Show UPI QR (scan from another phone)',
   upiQrTitle: 'Scan to pay with any UPI app',
   upiQrHint: 'Works with GPay, PhonePe, Paytm, FamPay, BHIM and bank apps. The money goes straight to the worker.',
-  myUpiQrBtn: (n) => `🔳 Show my UPI QR · ₹${n}`,
+  myUpiQrBtn: (n) => `🔳 Show my UPI QR · ${money(n)}`,
   noUpiYet: 'Add your UPI ID in your profile to show a pay QR.',
   qrIsUpi: 'That is a UPI payment QR. Scan it with GPay, PhonePe or another UPI app, not here.'
 });
 Object.assign(T.ta, {
   upiIdLabel: 'UPI ID (வங்கியில் கூலி பெற)',
-  upiPayBtn: (n) => `📲 UPI ஆப் மூலம் ₹${n} செலுத்து`,
+  upiPayBtn: (n) => `📲 UPI ஆப் மூலம் ${money(n)} செலுத்து`,
   upiHint: (id) => `${id} உடன் GPay, PhonePe அல்லது Paytm திறக்கும். செலுத்திய பின் "செலுத்தி முடி" அழுத்தவும்.`,
   upiMissing: 'இந்த வேலையாள் UPI ID சேர்க்கவில்லை. பணமாக கொடுத்து "செலுத்தி முடி" அழுத்தவும்.',
   upiQrBtn: '🔳 UPI QR காட்டு (வேறு போனில் ஸ்கேன் செய்ய)',
   upiQrTitle: 'எந்த UPI ஆப்பிலும் ஸ்கேன் செய்து செலுத்துங்கள்',
   upiQrHint: 'GPay, PhonePe, Paytm, FamPay, BHIM, வங்கி ஆப்கள் அனைத்திலும் வேலை செய்யும். பணம் நேரடியாக வேலையாளுக்குச் செல்லும்.',
-  myUpiQrBtn: (n) => `🔳 என் UPI QR காட்டு · ₹${n}`,
+  myUpiQrBtn: (n) => `🔳 என் UPI QR காட்டு · ${money(n)}`,
   noUpiYet: 'கட்டண QR காட்ட உங்கள் சுயவிவரத்தில் UPI ID சேர்க்கவும்.',
   qrIsUpi: 'இது UPI கட்டண QR. இதை GPay, PhonePe போன்ற UPI ஆப்பில் ஸ்கேன் செய்யுங்கள்.'
 });
 Object.assign(T.hi, {
   upiIdLabel: 'UPI ID (बैंक में पैसा पाने के लिए)',
-  upiPayBtn: (n) => `📲 UPI ऐप से ₹${n} दें`,
+  upiPayBtn: (n) => `📲 UPI ऐप से ${money(n)} दें`,
   upiHint: (id) => `${id} के साथ GPay, PhonePe या Paytm खुलेगा। भुगतान के बाद "दें और पूरा करें" दबाएँ।`,
   upiMissing: 'इस मज़दूर ने UPI ID नहीं जोड़ी है। नकद दें, फिर "दें और पूरा करें" दबाएँ।',
   upiQrBtn: '🔳 UPI QR दिखाएँ (दूसरे फ़ोन से स्कैन करें)',
   upiQrTitle: 'किसी भी UPI ऐप से स्कैन करके भुगतान करें',
   upiQrHint: 'GPay, PhonePe, Paytm, FamPay, BHIM और बैंक ऐप्स में चलता है। पैसा सीधे मज़दूर को जाता है।',
-  myUpiQrBtn: (n) => `🔳 मेरा UPI QR दिखाएँ · ₹${n}`,
+  myUpiQrBtn: (n) => `🔳 मेरा UPI QR दिखाएँ · ${money(n)}`,
   noUpiYet: 'भुगतान QR दिखाने के लिए प्रोफ़ाइल में अपनी UPI ID जोड़ें।',
   qrIsUpi: 'यह UPI भुगतान QR है। इसे GPay, PhonePe या किसी UPI ऐप से स्कैन करें।'
 });

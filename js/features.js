@@ -6,7 +6,6 @@
 // Owner: Member 4 (lead), with Member 3 (places) and Member 1 (messages)
 
 const LANGS = { en: 'English', ta: 'தமிழ்', hi: 'हिंदी' };
-const SPEECH_LANG = { en: 'en-IN', ta: 'ta-IN', hi: 'hi-IN' };
 
 // ---------- Language ----------
 function setLang(lang) {
@@ -31,7 +30,7 @@ function initLangSelect() {
 function speak(text) {
   if (!('speechSynthesis' in window)) return showToast(t('noVoice'));
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = SPEECH_LANG[App.lang] || 'en-IN';
+  u.lang = localeTag();
   u.rate = 0.9;
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(u);
@@ -125,7 +124,7 @@ function fmtDuration(mins) {
 
 function fmtDateTime(iso) {
   if (!iso) return '—';
-  return new Date(iso).toLocaleString(App.lang === 'en' ? 'en-IN' : App.lang + '-IN',
+  return new Date(iso).toLocaleString(localeTag(),
     { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
@@ -142,21 +141,21 @@ function slipHTML(b, employer, worker) {
     [t('worker'), `${esc(worker ? worker.name : '—')}${worker && worker.phone ? ' · ' + esc(worker.phone) : ''}`],
     [t('hours'), `${b.hours} ${t('hoursUnit')}`],
     [t('workedTime'), fmtDuration(workedMinutes(b))],
-    [t('agreedWage'), `₹${b.agreed_wage}`],
-    [t('overtimeLabel'), b.overtime_hours ? `${b.overtime_hours} h · +₹${otRate(b) * b.overtime_hours}` : '—'],
-    [t('tipLabel'), b.tip ? `+₹${b.tip}` : '—'],
-    [t('travelPay'), b.travel_pay ? `+₹${b.travel_pay}` : '—'],
-    ...(b.materials_amount ? [[t('materialsLabel'), `+₹${b.materials_amount}`]] : []),
+    [t('agreedWage'), `${money(b.agreed_wage)}`],
+    [t('overtimeLabel'), b.overtime_hours ? `${b.overtime_hours} h · +${money(otRate(b) * b.overtime_hours)}` : '—'],
+    [t('tipLabel'), b.tip ? `+${money(b.tip)}` : '—'],
+    [t('travelPay'), b.travel_pay ? `+${money(b.travel_pay)}` : '—'],
+    ...(b.materials_amount ? [[t('materialsLabel'), `+${money(b.materials_amount)}`]] : []),
     ...(b.rain_off ? [[t('rainLabel'), '🌧️ ✓']] : []),
     [t('commissionLabel'), t('commissionValue')],
-    [t('totalPaid'), `<b>₹${amountOf(b)}</b>`],
+    [t('totalPaid'), `<b>${money(amountOf(b))}</b>`],
     [t('paidOn'), fmtDateTime(b.paid_at)],
     [t('confirmedOn'), fmtDateTime(b.worker_confirmed_at)]
   ];
   return `
     <div class="slip" id="slipPrint">
       <div class="slip-head"><b>🤝 Worker Buddy</b><span>${t('paySlip')}</span></div>
-      <div class="slip-amount">₹${amountOf(b)}</div>
+      <div class="slip-amount">${money(amountOf(b))}</div>
       <div class="slip-ok">✅ ${t('slipConfirmed')}</div>
       <div class="agreement">${rows.map(([k, v]) => `<div><span>${k}</span><span>${v}</span></div>`).join('')}</div>
       <p class="muted small">${t('statementNote')}</p>
@@ -170,7 +169,7 @@ function slipText(b, employer, worker) {
     `${t('employer')}: ${employer ? employer.name : ''}`,
     `${t('worker')}: ${worker ? worker.name : ''}`,
     `${t('workedTime')}: ${fmtDuration(workedMinutes(b))}`,
-    `${t('totalPaid')}: ₹${amountOf(b)}`,
+    `${t('totalPaid')}: ${money(amountOf(b))}`,
     `${t('paidOn')}: ${fmtDateTime(b.paid_at)}`,
     `${t('confirmedOn')}: ${fmtDateTime(b.worker_confirmed_at)}`,
     t('slipConfirmed')
@@ -209,7 +208,7 @@ function periodTotals(slips) {
 function statementHTML(worker, slips) {
   const rows = slips.map((b) => `
     <tr><td>${fmtDateTime(b.worker_confirmed_at)}</td><td>${esc(b.receipt_no)}</td>
-    <td>${t(b.type)}</td><td>${esc(b.employer_name || '')}</td><td class="num">₹${amountOf(b)}</td></tr>`).join('');
+    <td>${t(b.type)}</td><td>${esc(b.employer_name || '')}</td><td class="num">${money(amountOf(b))}</td></tr>`).join('');
   const total = slips.reduce((s, b) => s + amountOf(b), 0);
   return `
     <div class="slip" id="slipPrint">
@@ -217,9 +216,9 @@ function statementHTML(worker, slips) {
       <p><b>${esc(worker.name)}</b> · ${esc(worker.phone)} · ${t(worker.skill)}</p>
       <p class="muted small">${t('printedOn')}: ${fmtDateTime(new Date().toISOString())}</p>
       <table class="statement">
-        <thead><tr><th>${t('paidOn')}</th><th>${t('receiptNo')}</th><th>${t('work')}</th><th>${t('employer')}</th><th class="num">₹</th></tr></thead>
+        <thead><tr><th>${t('paidOn')}</th><th>${t('receiptNo')}</th><th>${t('work')}</th><th>${t('employer')}</th><th class="num">${moneySign()}</th></tr></thead>
         <tbody>${rows || `<tr><td colspan="5">${t('noSlips')}</td></tr>`}</tbody>
-        <tfoot><tr><td colspan="4"><b>${t('totalPaid')}</b></td><td class="num"><b>₹${total}</b></td></tr></tfoot>
+        <tfoot><tr><td colspan="4"><b>${t('totalPaid')}</b></td><td class="num"><b>${money(total)}</b></td></tr></tfoot>
       </table>
       <p class="muted small">${t('statementNote')}</p>
     </div>`;
@@ -232,7 +231,7 @@ function openStatement(worker, slips) {
 }
 
 function downloadCSV(worker, slips) {
-  const head = ['Receipt', 'Confirmed on', 'Work', 'Area', 'Employer', 'Hours agreed', 'Overtime hours', 'Amount (INR)'];
+  const head = ['Receipt', 'Confirmed on', 'Work', 'Area', 'Employer', 'Hours agreed', 'Overtime hours', `Amount (${myCountry().currency})`];
   const cell = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
   const lines = [head.map(cell).join(',')].concat(slips.map((b) => [
     b.receipt_no, b.worker_confirmed_at, T.en[b.type], b.area, b.employer_name || '', b.hours, b.overtime_hours || 0, amountOf(b)
@@ -455,7 +454,7 @@ Object.assign(T.en, {
   ph_payingNow: 'I am paying now', ph_goodWork: 'Good work, thank you', ph_callMe: 'Please call me',
   overtimeLive: (h) => `Past the agreed hours: each extra hour is paid double (${h} so far)`,
   overtimeLabel: 'Overtime',
-  employerSaysPaid: (w) => `The employer says ₹${w} was paid. Did you receive it?`,
+  employerSaysPaid: (w) => `The employer says ${money(w)} was paid. Did you receive it?`,
   yesReceived: '✅ Yes, I received it',
   notReceived: '❌ Not received',
   disputedNote: 'You reported this payment as not received. The employer’s Fair Pay Score went down. Tap Yes if you get it later.',
@@ -508,7 +507,7 @@ Object.assign(T.ta, {
   ph_payingNow: 'இப்போது கூலி கொடுக்கிறேன்', ph_goodWork: 'நல்ல வேலை, நன்றி', ph_callMe: 'என்னை அழையுங்கள்',
   overtimeLive: (h) => `ஒப்புக்கொண்ட நேரத்தைத் தாண்டியது: ஒவ்வொரு கூடுதல் மணிக்கும் இரட்டிப்பு கூலி (இதுவரை ${h})`,
   overtimeLabel: 'கூடுதல் நேரம்',
-  employerSaysPaid: (w) => `₹${w} கொடுத்ததாக முதலாளி சொல்கிறார். உங்களுக்கு கிடைத்ததா?`,
+  employerSaysPaid: (w) => `${money(w)} கொடுத்ததாக முதலாளி சொல்கிறார். உங்களுக்கு கிடைத்ததா?`,
   yesReceived: '✅ ஆம், கிடைத்தது',
   notReceived: '❌ கிடைக்கவில்லை',
   disputedNote: 'இந்த கூலி கிடைக்கவில்லை என்று சொன்னீர்கள். முதலாளியின் நியாய ஊதிய மதிப்பெண் குறைந்தது. பின்னர் கிடைத்தால் ஆம் தட்டவும்.',

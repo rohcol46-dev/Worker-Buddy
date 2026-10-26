@@ -133,7 +133,7 @@ function agreementText(b, employerName, workerName) {
     `📄 ${t('agreementTitle')} WB-${b.id.slice(0, 6).toUpperCase()}`,
     `${t('work')}: ${t(b.type)}, ${b.area}`,
     `${t('hours')}: ${b.hours} ${t('hoursUnit')}`,
-    `${t('agreedWage')}: ₹${b.agreed_wage}`,
+    `${t('agreedWage')}: ${money(b.agreed_wage)}`,
     `${t('employer')}: ${employerName}`,
     `${t('worker')}: ${workerName}`,
     t('agreementNote')
@@ -160,7 +160,7 @@ function timeAgo(iso) {
   if (mins < 1) return t('justNowShort');
   if (mins < 60) return `${mins} min`;
   const h = Math.floor(mins / 60);
-  return h < 24 ? `${h} h` : new Date(iso).toLocaleDateString(App.lang === 'ta' ? 'ta-IN' : 'en-IN', { day: 'numeric', month: 'short' });
+  return h < 24 ? `${h} h` : new Date(iso).toLocaleDateString(localeTag(), { day: 'numeric', month: 'short' });
 }
 
 function clock(secs) {
@@ -322,8 +322,8 @@ Object.assign(T.en, {
   wrongOtp: 'Wrong OTP. Try again.',
   workInProgress: 'Work in progress',
   completeJob: 'Complete job',
-  waitingPayment: (w) => `Waiting for payment of ₹${w}`,
-  paymentReceived: (w) => `₹${w} received`,
+  waitingPayment: (w) => `Waiting for payment of ${money(w)}`,
+  paymentReceived: (w) => `${money(w)} received`,
   backHome: 'Back to home',
   call: 'Call',
   whatsapp: 'WhatsApp',
@@ -334,7 +334,7 @@ Object.assign(T.en, {
   onlineNearby: (n, name) => `${name}: ${n} online nearby`,
   noneOnline: (name) => `${name}: none online right now. You can still book; workers who come online will see it.`,
   whereWork: 'Where is the work?',
-  bookNow: (w) => `Book worker · ₹${w}`,
+  bookNow: (w) => `Book worker · ${money(w)}`,
   agreedPay: 'Pay you agree to',
   searchingFor: (name) => `Finding ${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name.toLowerCase()} near you…`,
   requestSentTo: (n) => `Request sent to ${n} online worker${n === 1 ? '' : 's'}`,
@@ -343,7 +343,7 @@ Object.assign(T.en, {
   tryAgain: 'Try again',
   workerOnTheWay: (n) => `${n} accepted and is on the way`,
   shareOtp: 'Share this OTP when the worker arrives',
-  payNow: (w) => `Pay ₹${w} and finish`,
+  payNow: (w) => `Pay ${money(w)} and finish`,
   paidThanks: 'Paid. Thank you for paying on time!',
   bookAgain: 'Book another worker',
   yourFairPay: 'Your Fair Pay Score',
@@ -387,8 +387,8 @@ Object.assign(T.ta, {
   wrongOtp: 'தவறான OTP. மீண்டும் முயற்சிக்கவும்.',
   workInProgress: 'வேலை நடக்கிறது',
   completeJob: 'வேலை முடிந்தது',
-  waitingPayment: (w) => `₹${w} கூலிக்காக காத்திருக்கிறது`,
-  paymentReceived: (w) => `₹${w} பெறப்பட்டது`,
+  waitingPayment: (w) => `${money(w)} கூலிக்காக காத்திருக்கிறது`,
+  paymentReceived: (w) => `${money(w)} பெறப்பட்டது`,
   backHome: 'முகப்புக்குத் திரும்பு',
   call: 'அழை',
   whatsapp: 'வாட்ஸ்அப்',
@@ -399,7 +399,7 @@ Object.assign(T.ta, {
   onlineNearby: (n, name) => `அருகில் ${n} ${name} ஆன்லைனில்`,
   noneOnline: (name) => `இப்போது ${name} யாரும் ஆன்லைனில் இல்லை. நீங்கள் புக் செய்யலாம்; ஆன்லைனுக்கு வருபவர்கள் பார்ப்பார்கள்.`,
   whereWork: 'வேலை எங்கே?',
-  bookNow: (w) => `வேலையாளை புக் செய் · ₹${w}`,
+  bookNow: (w) => `வேலையாளை புக் செய் · ${money(w)}`,
   agreedPay: 'நீங்கள் ஒப்புக்கொள்ளும் கூலி',
   searchingFor: (name) => `அருகில் ${name} தேடுகிறது…`,
   requestSentTo: (n) => `${n} ஆன்லைன் வேலையாட்களுக்கு கோரிக்கை அனுப்பப்பட்டது`,
@@ -408,7 +408,7 @@ Object.assign(T.ta, {
   tryAgain: 'மீண்டும் முயற்சி',
   workerOnTheWay: (n) => `${n} ஏற்றுக்கொண்டு வருகிறார்`,
   shareOtp: 'வேலையாள் வந்ததும் இந்த OTP-ஐ சொல்லுங்கள்',
-  payNow: (w) => `₹${w} செலுத்தி முடி`,
+  payNow: (w) => `${money(w)} செலுத்தி முடி`,
   paidThanks: 'கூலி கொடுக்கப்பட்டது. நேரத்தில் கொடுத்ததற்கு நன்றி!',
   bookAgain: 'மற்றொரு வேலையாளை புக் செய்',
   yourFairPay: 'உங்கள் நியாய ஊதிய மதிப்பெண்',
