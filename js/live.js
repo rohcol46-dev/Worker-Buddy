@@ -133,7 +133,7 @@ function agreementText(b, employerName, workerName) {
     `📄 ${t('agreementTitle')} WB-${b.id.slice(0, 6).toUpperCase()}`,
     `${t('work')}: ${t(b.type)}, ${b.area}`,
     `${t('hours')}: ${b.hours} ${t('hoursUnit')}`,
-    `${t('agreedWage')}: ${money(b.agreed_wage)}`,
+    `${t('agreedWage')}: ${money(b.agreed_wage, b.currency)}`,
     `${t('employer')}: ${employerName}`,
     `${t('worker')}: ${workerName}`,
     t('agreementNote')

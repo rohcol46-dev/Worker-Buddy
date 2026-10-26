@@ -41,6 +41,14 @@ end $$;
 insert into auth.users (id, phone, phone_confirmed_at, is_anonymous) values
   ('00000000-0000-0000-0000-0000000000f1', '254712000001', now(), false),
   ('00000000-0000-0000-0000-0000000000f2', null, null, true);
+
+-- Kenya is not open yet: nobody can sign up there
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f2', false);
+select pg_temp.expect_error($$insert into public.workers (device_id, name, phone, skill, birth_year, auth_id, country)
+  values ('d-f2x', 'Early', '0712000002', 'mason', 1992, '00000000-0000-0000-0000-0000000000f2', 'KE')$$, 'country_not_open');
+reset role;
+update public.countries set live = true where code = 'KE';
 insert into public.employers (id, device_id, name, phone, auth_id, country) values
   ('10000000-0000-0000-0000-0000000000f1', 'd-k1', 'Nairobi Builders', '0700000000', '00000000-0000-0000-0000-0000000000f1', 'KE');
 insert into public.workers (id, device_id, name, phone, skill, birth_year, online, auth_id, country) values
@@ -63,12 +71,21 @@ do $$ begin
   assert (select phone from public.workers where id = '20000000-0000-0000-0000-0000000000f2') = '+254712000003', 'changed number';
 end $$;
 
+-- A profile keeps its country (moving it would move the night-work clock)
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e1', false);
+update public.employers set country = 'KE' where id = '10000000-0000-0000-0000-0000000000e1';
+reset role;
+do $$ begin
+  assert (select country from public.employers where id = '10000000-0000-0000-0000-0000000000e1') = 'IN', 'country is fixed';
+end $$;
+
 -- A job takes its employer's country and currency, whatever the app sends
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f1', false);
 with made as (
   insert into public.bookings (employer_id, type, area, hours, load, wage_min, wage_max, agreed_wage, scheduled_for, country, currency)
-  values ('10000000-0000-0000-0000-0000000000f1', 'mason', 'Kibera', 8, 'light', 700, 900, 800,
+  values ('10000000-0000-0000-0000-0000000000f1', 'mason', 'Kibera', 8, 'light', 400, 600, 500,
           (date_trunc('day', now() at time zone 'Africa/Nairobi') + interval '1 day 10 hours') at time zone 'Africa/Nairobi', 'IN', 'INR')
   returning id
 )
@@ -83,6 +100,8 @@ reset role;
 do $$ begin
   assert (select country || ' ' || currency from public.bookings where id = (select id from ids where name = 'ke_job')) = 'KE KES',
     'job keeps employer country and currency';
+  assert (select agreed_wage from public.bookings where id = (select id from ids where name = 'ke_job')) = 500,
+    'the Tamil Nadu rupee floor is not applied to a Kenyan job';
   assert (select b.country || ' ' || b.currency from public.bookings b join public.employers e on e.id = b.employer_id
            where e.country = 'IN' limit 1) = 'IN INR', 'Indian jobs are IN and INR';
 end $$;

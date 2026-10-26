@@ -96,7 +96,7 @@ function evidenceEvents(b) {
     ev.push([b.started_at, b.start_m != null ? tf('ev_startedAt', b.start_m) : t('ev_started')]);
   }
   if (b.effort_status) {
-    ev.push([b.effort_at, `😓 ${t('effortTitle')}: ${effortClaimText(b)} (+${money(b.effort_extra)})`]);
+    ev.push([b.effort_at, `😓 ${t('effortTitle')}: ${effortClaimText(b)} (+${money(b.effort_extra, b.currency)})`]);
     if (b.effort_status !== 'pending') ev.push([null, b.effort_status === 'accepted' ? tf('effortAccepted', b.effort_extra) : tf('effortRefused', b.effort_extra)]);
   }
   if (b.completed_at) ev.push([b.completed_at, b.rain_off ? t('ev_rain') : tf('ev_completed', fmtDuration(workedMinutes(b)), b.overtime_hours)]);
@@ -125,9 +125,9 @@ function drawEvidence() {
         <div><span>${t('employer')}</span><span>${esc(e.name || '—')}${e.gstin ? ' · GST ' + esc(e.gstin) : ''} · ${scoreBadge(e)}</span></div>
         <div><span>${t('worker')}</span><span>${esc(EV.worker ? EV.worker.name : '—')}</span></div>
         <div><span>${t('hours')}</span><span>${b.hours} ${t('hoursUnit')}</span></div>
-        <div><span>${t('agreedWage')}</span><span>${money(b.agreed_wage)} (${t('fairRange')} ${money(b.wage_min)}–${money(b.wage_max)})</span></div>
-        ${b.travel_pay ? `<div><span>${t('travelPay')}</span><span>+${money(b.travel_pay)}</span></div>` : ''}
-        <div><span><b>${t('totalPaid')}</b></span><span><b>${money(amountOf(b))}</b></span></div>
+        <div><span>${t('agreedWage')}</span><span>${money(b.agreed_wage, b.currency)} (${t('fairRange')} ${money(b.wage_min, b.currency)}–${money(b.wage_max, b.currency)})</span></div>
+        ${b.travel_pay ? `<div><span>${t('travelPay')}</span><span>+${money(b.travel_pay, b.currency)}</span></div>` : ''}
+        <div><span><b>${t('totalPaid')}</b></span><span><b>${money(amountOf(b), b.currency)}</b></span></div>
       </div>
       <h3>${t('ev_timeline')}</h3>
       <ul class="timeline">${events}</ul>

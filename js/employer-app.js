@@ -507,7 +507,7 @@ function renderBooking() {
         <p class="muted">${b.preferred_worker_id ? `🎯 ${tf('requestingOnly', esc(preferred ? preferred.name : t('worker')))}` : tf('requestSentTo', onlineOfType())}</p>
         ${b.scheduled_for ? `<p><b>${tf('scheduledFor', whenText(b))}</b><br><span class="muted small">${t('waitingAccept')}</span></p>`
           : '<div class="big-timer"><b id="searchClock">10:00</b></div>'}
-        <p class="small">📍 ${esc(b.area)} · ⏱️ ${b.hours} ${t('hoursUnit')} · <b>${money(b.agreed_wage)}</b></p>
+        <p class="small">📍 ${esc(b.area)} · ⏱️ ${b.hours} ${t('hoursUnit')} · <b>${money(b.agreed_wage, b.currency)}</b></p>
         <p class="paid-ok small">${t('jobPosted')}</p>
         ${reservedFor(b) ? `<p class="small">${t('favReserved')}</p>` : ''}
         <button class="btn btn-whatsapp btn-block btn-big" onclick="shareJob(E.booking, E.me.name)">${t('shareJobWa')}</button>
@@ -559,10 +559,10 @@ function renderBooking() {
   } else if (b.status === 'completed') {
     action = `
       <div class="agreement">
-        <div><span>${t('agreedWage')}</span><span>${money(b.agreed_wage)}</span></div>
-        ${b.overtime_hours ? `<div><span>${t('overtimeLabel')} (${b.overtime_hours} h)</span><span>+${money(otRate(b) * b.overtime_hours)}</span></div>` : ''}
+        <div><span>${t('agreedWage')}</span><span>${money(b.agreed_wage, b.currency)}</span></div>
+        ${b.overtime_hours ? `<div><span>${t('overtimeLabel')} (${b.overtime_hours} h)</span><span>+${money(otRate(b) * b.overtime_hours, b.currency)}</span></div>` : ''}
         <div><span>${t('workedTime')}</span><span>${fmtDuration(workedMinutes(b))}</span></div>
-        ${b.travel_pay ? `<div><span>${t('travelPay')}</span><span>+${money(b.travel_pay)}</span></div>` : ''}
+        ${b.travel_pay ? `<div><span>${t('travelPay')}</span><span>+${money(b.travel_pay, b.currency)}</span></div>` : ''}
         ${b.rain_off ? `<div><span>${t('rainLabel')}</span><span>🌧️</span></div>` : ''}
         ${approvedMaterials() ? `<div><span>${t('materialsLabel')}</span><span>+${money(approvedMaterials())}</span></div>` : ''}
         ${E.tip ? `<div><span>${t('tipLabel')}</span><span>+${money(E.tip)}</span></div>` : ''}
@@ -576,7 +576,7 @@ function renderBooking() {
       <button class="btn btn-accept btn-block btn-big" onclick="payWorker()">${tf('payNow', amount + E.tip + approvedMaterials())}</button>`}
       <button class="link-btn small close-unpaid" onclick="employerCancel()">${t('cancelJobBtn')}</button>`;
   } else if (b.status === 'paid' && b.worker_confirmed_at) {
-    action = `<p class="paid-ok">✅ ${t('slipConfirmed')}${b.tip ? ` · 🙏 ${t('tipLabel')} ${money(b.tip)}` : ''}</p>
+    action = `<p class="paid-ok">✅ ${t('slipConfirmed')}${b.tip ? ` · 🙏 ${t('tipLabel')} ${money(b.tip, b.currency)}` : ''}</p>
       <button class="btn btn-dark btn-block" onclick="openSlip(E.booking, E.me, E.worker)">${t('viewSlip')}</button>`;
   } else if (b.status === 'paid' && b.disputed) {
     action = `<p class="dispute-note">⚠️ ${t('workerDisputed')}</p>`;
@@ -734,7 +734,7 @@ function crewSlotHTML(b, i) {
         : b.disputed ? `<span class="badge badge-disputed">⚠️ ${t('statusDisputed')}</span>`
           : `<span class="badge badge-accepted">${t('awaitingConfirm')}</span>`;
     }
-    if (b.effort_status === 'pending') action += ` <span class="badge badge-accepted">😓 +${money(b.effort_extra)}</span>`;
+    if (b.effort_status === 'pending') action += ` <span class="badge badge-accepted">😓 +${money(b.effort_extra, b.currency)}</span>`;
     const chat = ['assigned', 'started', 'completed'].includes(b.status)
       ? `<button class="icon-btn" onclick="openCrewChat('${b.id}')" aria-label="${attr(t('quickMessages'))}">💬</button>` : '';
     body = `<div class="crew-main"><b>${esc(w ? w.name : '…')}</b> <small>${w ? workerStars(w) : ''}</small><br>${action}</div>
@@ -844,7 +844,7 @@ function drawCrewPay() {
     <h3>${esc(w.name || '')}</h3>
     ${effortHTML('employer', b)}
     <div class="agreement">
-      <div><span>${t('agreedWage')}</span><span>${money(amountOf(b))}</span></div>
+      <div><span>${t('agreedWage')}</span><span>${money(amountOf(b), b.currency)}</span></div>
       ${tip ? `<div><span>${t('tipLabel')}</span><span>+${money(tip)}</span></div>` : ''}
       <div><span><b>${t('totalPaid')}</b></span><span><b>${money(total)}</b></span></div>
     </div>
@@ -1071,7 +1071,7 @@ async function renderBookings() {
         ${b.rating_by_employer ? `<span class="stars-small">${'★'.repeat(b.rating_by_employer)}</span>` : ''}
       </div>
       <div class="actions">
-        <b class="pay-chip">${money(amountOf(b))}</b>
+        <b class="pay-chip">${money(amountOf(b), b.currency)}</b>
         ${b.worker_confirmed_at ? `<button class="btn btn-light btn-small" onclick="openRecordSlip(${i})">🧾</button>` : ''}
         ${b.worker && b.status === 'paid' && !b.rating_by_employer ? `<button class="btn btn-primary btn-small" onclick="rateRecord(${i})">⭐ ${t('rateWorkerShort')}</button>` : ''}
         ${b.worker && b.status === 'paid' ? `<button class="btn btn-light btn-small" onclick="bookAgain(${i})">${t('bookAgainWorker')}</button>` : ''}

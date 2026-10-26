@@ -13,7 +13,7 @@ function jobShareText(b, employerName) {
   return [
     `🧰 ${t('jobPostTitle')}: ${WORK_TYPES[b.type].icon} ${t(b.type)}`,
     `📍 ${b.area}`,
-    `⏱️ ${b.hours} ${t('hoursUnit')} · 💰 ${money(b.agreed_wage)} (${t('fairRange')} ${money(b.wage_min)}–${money(b.wage_max)})`,
+    `⏱️ ${b.hours} ${t('hoursUnit')} · 💰 ${money(b.agreed_wage, b.currency)} (${t('fairRange')} ${money(b.wage_min, b.currency)}–${money(b.wage_max, b.currency)})`,
     b.scheduled_for ? `📅 ${whenText(b)}` : '',
     b.group_size > 1 ? tf('teamJob', b.group_size) : '',
     b.bring_tools ? t('toolsTag') : '',
@@ -90,7 +90,7 @@ async function reportHeat(bookingId) {
   speak(t('heatFirstAid'));
   document.querySelectorAll('.heat-help').forEach((help) => {
     help.innerHTML = `<p class="dispute-note">${t('heatFirstAid')}</p>
-      <a class="btn btn-dark btn-block" href="tel:108">🚑 108</a>`;
+      ${ambulanceLink()}`;
   });
   if (typeof W === 'undefined' || !W.me) return;
   const row = { worker_id: W.me.id, booking_id: bookingId || null, feels_like: App.simulateHot ? 40 : App.temp, lat: App.here.lat, lng: App.here.lng };
@@ -126,7 +126,7 @@ function listenVoice(onText) {
   if (!Rec) return showToast(t('noVoiceInput'));
   if (recognizer) recognizer.abort();
   recognizer = new Rec();
-  recognizer.lang = localeTag();
+  recognizer.lang = speechTag();
   recognizer.interimResults = false;
   recognizer.maxAlternatives = 1;
   const btn = document.getElementById('micBtn');

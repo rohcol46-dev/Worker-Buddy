@@ -259,8 +259,8 @@ function openMonthlyReport(records, me) {
   const showups = records.filter((b) => b.showup_paid_at && Date.parse(b.showup_paid_at) >= start);
   const total = paid.reduce((s, b) => s + amountOf(b), 0) + showups.reduce((s, b) => s + b.showup_pay, 0);
   const rows = paid.map((b) => `<tr><td>${fmtDateTime(b.paid_at)}</td><td>${t(b.type)}${b.worker ? ' · ' + esc(b.worker.name) : ''}</td>
-    <td>${esc(b.receipt_no || '—')}</td><td class="num">${money(amountOf(b))}</td></tr>`).join('') +
-    showups.map((b) => `<tr><td>${fmtDateTime(b.showup_paid_at)}</td><td>${t('showupLabel')}</td><td>—</td><td class="num">${money(b.showup_pay)}</td></tr>`).join('');
+    <td>${esc(b.receipt_no || '—')}</td><td class="num">${money(amountOf(b), b.currency)}</td></tr>`).join('') +
+    showups.map((b) => `<tr><td>${fmtDateTime(b.showup_paid_at)}</td><td>${t('showupLabel')}</td><td>—</td><td class="num">${money(b.showup_pay, b.currency)}</td></tr>`).join('');
   const month = now.toLocaleDateString(localeTag(), { month: 'long', year: 'numeric' });
   document.getElementById('slipBody').innerHTML = `
     <div class="slip" id="slipPrint">

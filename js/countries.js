@@ -22,21 +22,31 @@ function setMyCountry(code) {
   if (!code || code === Country.code) return;
   Country.code = code;
   Store.set('country', code);
+  if (!Country.list[code]) loadCountries(true);
   applyPhoneInputs();
+  if (typeof accountHTML === 'function') document.querySelectorAll('.account-box:not([hidden])').forEach((box) => { box.innerHTML = accountHTML(); });
 }
 
-async function loadCountries() {
+// The list rarely changes: fetched when missing or a day old
+async function loadCountries(force) {
   if (typeof db === 'undefined') return;
+  if (!force && Country.list[Country.code] && Date.now() - Store.get('countries_at', 0) < 86400000) return;
   const { data, error } = await db.from('countries').select('*');
   if (error || !data) return;
   data.forEach((c) => { Country.list[c.code] = c; });
   Store.set('countries', Country.list);
+  Store.set('countries_at', Date.now());
   applyPhoneInputs();
 }
 
-// Language + country for dates, numbers and speech, e.g. ta-IN or en-KE
+// Language + country for dates and numbers, e.g. ta-IN or en-KE
 function localeTag() {
   return `${App.lang}-${myCountry().code}`;
+}
+
+// Speech engines know few language-country pairs: English follows the country, Tamil and Hindi stay Indian
+function speechTag() {
+  return App.lang === 'en' ? localeTag() : ({ ta: 'ta-IN', hi: 'hi-IN' }[App.lang] || App.lang);
 }
 
 // ---------- Money ----------
@@ -72,10 +82,12 @@ function moneySign() {
 
 // What the person typed -> +919876543210, or null when it is not a valid number in their country
 function phoneIntl(raw, countryCode) {
-  const c = Country.list[countryCode] || myCountry();
+  const c = Country.list[countryCode || Country.code];
   const text = String(raw || '').trim();
   let d = text.replace(/\D/g, '');
   if (!d) return null;
+  // Pack not loaded yet (first open, offline): the database checks it with the right country
+  if (!c) return (text.startsWith('+') ? '+' : '') + d;
   const national = new RegExp(`^(?:${c.phone_pattern})$`);
   if (text.startsWith('+') || text.startsWith('00')) {
     d = d.replace(/^00/, '');
@@ -111,15 +123,25 @@ function waHref(p, text) {
   return `https://wa.me/${d}` + (text ? `?text=${encodeURIComponent(text)}` : '');
 }
 
-// Phone fields marked data-phone follow the country's format
+// India's ambulance is 108; elsewhere the country's emergency number
+function ambulanceLink() {
+  const n = myCountry().code === 'IN' ? '108' : myCountry().emergency;
+  return `<a class="btn btn-dark btn-block" href="tel:${n}">🚑 ${n}</a>`;
+}
+
+// Phone fields marked data-phone follow the country's format; emergency buttons call the country's number
 function applyPhoneInputs() {
   const c = myCountry();
+  document.querySelectorAll('a[data-emergency]').forEach((a) => {
+    a.href = 'tel:' + c.emergency;
+    a.querySelector('b').textContent = c.emergency;
+  });
+  document.querySelectorAll('[data-only-country]').forEach((el) => { el.hidden = el.dataset.onlyCountry !== c.code; });
   document.querySelectorAll('input[data-phone]').forEach((el) => {
     el.placeholder = c.phone_example;
     el.removeAttribute('pattern');
     el.maxLength = 20;
   });
-  document.querySelectorAll('[data-calling-code]').forEach((el) => { el.textContent = '+' + c.calling_code; });
 }
 
 document.addEventListener('DOMContentLoaded', () => {

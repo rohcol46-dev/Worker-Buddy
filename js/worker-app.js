@@ -303,7 +303,7 @@ async function showRequest(b) {
       </div>
       <button type="button" class="btn btn-light btn-small listen-btn" data-say="${attr(requestSpeech(b, employer))}">${t('listenJob')}</button>
     </div>
-    <div class="request-pay">${money(b.agreed_wage)}<small>${money(b.wage_min)} – ${money(b.wage_max)} ${t('estimate').toLowerCase()}</small></div>
+    <div class="request-pay">${money(b.agreed_wage, b.currency)}<small>${money(b.wage_min, b.currency)} – ${money(b.wage_max, b.currency)} ${t('estimate').toLowerCase()}</small></div>
     <div class="tags">${tags}</div>
     ${b.perks && b.perks.length ? `<div class="tags">${perksHTML(b.perks)}</div>` : ''}
     ${b.preferred_worker_id ? `<p class="preferred-note">${t('requestedYou')}</p>` : ''}
@@ -471,7 +471,7 @@ function renderActive() {
   } else if (b.status === 'completed') {
     speech = tf('waitingPayment', amount + approvedMaterials());
     action = `<p class="wait-pay"><span class="pulse-dot"></span>${tf('waitingPayment', amount + approvedMaterials())} ${speakButton(speech)}</p>
-      ${b.overtime_hours ? `<p class="overtime">${t('overtimeLabel')}: ${b.overtime_hours} h · +${money(otRate(b) * b.overtime_hours)}</p>` : ''}
+      ${b.overtime_hours ? `<p class="overtime">${t('overtimeLabel')}: ${b.overtime_hours} h · +${money(otRate(b) * b.overtime_hours, b.currency)}</p>` : ''}
       ${b.travel_pay ? `<p class="small">${tf('travelTag', b.travel_pay)}</p>` : ''}
       ${b.rain_off ? `<p class="overtime">${tf('rainNote', amount)}</p>` : ''}
       ${W.me.upi_id ? `<button class="btn btn-upi btn-block btn-big" onclick="showUpiQR(W.active, W.me, amountOf(W.active) + approvedMaterials())">${tf('myUpiQrBtn', amount + approvedMaterials())}</button>`
@@ -649,7 +649,7 @@ function laterCard(b, mine) {
         ${b.preferred_worker_id ? `<br><span class="small">${t('requestedYou')}</span>` : ''}
       </div>
       <div class="actions">
-        <b class="pay-chip">${money(b.agreed_wage)}</b>
+        <b class="pay-chip">${money(b.agreed_wage, b.currency)}</b>
         ${mine ? `<button class="btn btn-light btn-small" onclick="cantCome('${b.id}')">${t('cantCome')}</button>`
           : `<button class="btn btn-accept btn-small" onclick="acceptLater('${b.id}')">${t('acceptLater')}</button>`}
       </div>
@@ -807,7 +807,7 @@ function drawEarnings() {
         ${b.rating_by_worker ? `<span class="stars-small">${'★'.repeat(b.rating_by_worker)}</span>` : ''}
       </div>
       <div class="actions">
-        <b class="pay-chip">${money(amountOf(b))}</b>
+        <b class="pay-chip">${money(amountOf(b), b.currency)}</b>
         ${b.worker_confirmed_at ? `<button class="btn btn-light btn-small" onclick="openRecordSlip(${i})">🧾</button>` : ''}
         ${b.disputed || b.worker_confirmed_at ? `<a class="btn btn-light btn-small" target="_blank" rel="noopener" href="${disputeLink(b)}">⚖️</a>` : ''}
       </div>
@@ -889,7 +889,7 @@ App.onVoice = (cmd, digits) => {
   if (cmd === 'received' && b && b.status === 'paid' && !b.worker_confirmed_at) { confirmPay(true); return true; }
   if (cmd === 'read') {
     if (W.request) speak(requestSpeech(W.request, W.requestEmployer));
-    else if (b) speak(`${t(b.type)}, ${b.area}. ${statusLabel(b.status)}. ${money(amountOf(b))}`);
+    else if (b) speak(`${t(b.type)}, ${b.area}. ${statusLabel(b.status)}. ${money(amountOf(b), b.currency)}`);
     else speak(W.me.online ? t('onlineWaiting') : t('offlineHint'));
     return true;
   }

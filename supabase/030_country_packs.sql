@@ -3,8 +3,9 @@
 -- worker, employer and job records its country. India is the first (and for now the only live) pack,
 -- so nothing changes for people already using the app.
 -- 1. countries: currency, calling code, phone format, time zone, emergency number, languages.
--- 2. A country on workers, employers, crew members' leaders and jobs. A job takes its employer's
---    country and that country's currency, so a pay slip never changes if settings change later.
+-- 2. A country on workers, employers and jobs. A profile can only be made in a live country and
+--    keeps it. A job takes its employer's country and that country's currency, so a pay slip never
+--    changes if settings change later.
 -- 3. Phone numbers are stored in international form (+919876543210). A number typed the local way
 --    (9876543210) is converted using the person's country, so older app versions keep working.
 -- 4. The night-work rule and repeat jobs use the job's own time zone, not Asia/Kolkata.
@@ -57,6 +58,27 @@ alter table public.employers add column country text not null default 'IN' refer
 alter table public.bookings add column country text not null default 'IN' references public.countries(code);
 alter table public.bookings add column currency text not null default 'INR' check (currency ~ '^[A-Z]{3}$');
 
+-- A profile is made in a country that is open for sign-up, and keeps that country: changing it
+-- would move the clock the night-work rule reads. Moving country is done by the founder.
+create function public.profile_country() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if tg_op = 'UPDATE' then
+    if new.country is distinct from old.country and current_setting('wb.internal', true) is distinct from 'on' then
+      new.country := old.country;
+    end if;
+  elsif not exists (select 1 from public.countries where code = new.country and live) then
+    raise exception 'country_not_open' using errcode = '22023';
+  end if;
+  return new;
+end $$;
+-- Named so it runs before *_phone_from_account, which reads the number in this country
+create trigger workers_country before insert or update of country on public.workers
+  for each row execute function public.profile_country();
+create trigger employers_country before insert or update of country on public.employers
+  for each row execute function public.profile_country();
+revoke execute on function public.profile_country() from public, anon, authenticated;
+
 -- A new job always takes its employer's country and that country's currency
 create function public.booking_country() returns trigger
 language plpgsql security definer set search_path = '' as $$
@@ -81,6 +103,23 @@ end $$;
 create trigger bookings_country_fixed before update of country, currency on public.bookings
   for each row execute function public.booking_country_fixed();
 revoke execute on function public.booking_country(), public.booking_country_fixed() from public, anon, authenticated;
+
+-- The minimum wages in min_wages (016) are Tamil Nadu's, in rupees: they apply to Indian jobs only
+-- until wages are kept per country. Runs after bookings_country, which has set the job's country.
+create or replace function public.bookings_fair_pay() returns trigger language plpgsql set search_path = '' as $$
+declare floor_pay int;
+begin
+  if tg_op = 'INSERT' and new.country = 'IN' then
+    floor_pay := public.legal_min_wage(new.type, new.hours);
+    if floor_pay is not null then
+      new.wage_min := greatest(new.wage_min, floor_pay);
+      new.wage_max := greatest(new.wage_max, new.wage_min);
+      new.agreed_wage := greatest(new.agreed_wage, floor_pay);
+    end if;
+  end if;
+  new.ot_rate := public.ot_rate(new.agreed_wage, new.hours);
+  return new;
+end $$;
 
 -- ---------- 3. Phone numbers in international form ----------
 -- Returns +<calling code><national number>, or null when the number is not valid for the country.

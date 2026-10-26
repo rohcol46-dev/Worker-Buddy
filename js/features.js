@@ -30,7 +30,7 @@ function initLangSelect() {
 function speak(text) {
   if (!('speechSynthesis' in window)) return showToast(t('noVoice'));
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = localeTag();
+  u.lang = speechTag();
   u.rate = 0.9;
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(u);
@@ -141,21 +141,21 @@ function slipHTML(b, employer, worker) {
     [t('worker'), `${esc(worker ? worker.name : '—')}${worker && worker.phone ? ' · ' + esc(worker.phone) : ''}`],
     [t('hours'), `${b.hours} ${t('hoursUnit')}`],
     [t('workedTime'), fmtDuration(workedMinutes(b))],
-    [t('agreedWage'), `${money(b.agreed_wage)}`],
-    [t('overtimeLabel'), b.overtime_hours ? `${b.overtime_hours} h · +${money(otRate(b) * b.overtime_hours)}` : '—'],
-    [t('tipLabel'), b.tip ? `+${money(b.tip)}` : '—'],
-    [t('travelPay'), b.travel_pay ? `+${money(b.travel_pay)}` : '—'],
-    ...(b.materials_amount ? [[t('materialsLabel'), `+${money(b.materials_amount)}`]] : []),
+    [t('agreedWage'), `${money(b.agreed_wage, b.currency)}`],
+    [t('overtimeLabel'), b.overtime_hours ? `${b.overtime_hours} h · +${money(otRate(b) * b.overtime_hours, b.currency)}` : '—'],
+    [t('tipLabel'), b.tip ? `+${money(b.tip, b.currency)}` : '—'],
+    [t('travelPay'), b.travel_pay ? `+${money(b.travel_pay, b.currency)}` : '—'],
+    ...(b.materials_amount ? [[t('materialsLabel'), `+${money(b.materials_amount, b.currency)}`]] : []),
     ...(b.rain_off ? [[t('rainLabel'), '🌧️ ✓']] : []),
     [t('commissionLabel'), t('commissionValue')],
-    [t('totalPaid'), `<b>${money(amountOf(b))}</b>`],
+    [t('totalPaid'), `<b>${money(amountOf(b), b.currency)}</b>`],
     [t('paidOn'), fmtDateTime(b.paid_at)],
     [t('confirmedOn'), fmtDateTime(b.worker_confirmed_at)]
   ];
   return `
     <div class="slip" id="slipPrint">
       <div class="slip-head"><b>🤝 Worker Buddy</b><span>${t('paySlip')}</span></div>
-      <div class="slip-amount">${money(amountOf(b))}</div>
+      <div class="slip-amount">${money(amountOf(b), b.currency)}</div>
       <div class="slip-ok">✅ ${t('slipConfirmed')}</div>
       <div class="agreement">${rows.map(([k, v]) => `<div><span>${k}</span><span>${v}</span></div>`).join('')}</div>
       <p class="muted small">${t('statementNote')}</p>
@@ -169,7 +169,7 @@ function slipText(b, employer, worker) {
     `${t('employer')}: ${employer ? employer.name : ''}`,
     `${t('worker')}: ${worker ? worker.name : ''}`,
     `${t('workedTime')}: ${fmtDuration(workedMinutes(b))}`,
-    `${t('totalPaid')}: ${money(amountOf(b))}`,
+    `${t('totalPaid')}: ${money(amountOf(b), b.currency)}`,
     `${t('paidOn')}: ${fmtDateTime(b.paid_at)}`,
     `${t('confirmedOn')}: ${fmtDateTime(b.worker_confirmed_at)}`,
     t('slipConfirmed')
@@ -208,7 +208,7 @@ function periodTotals(slips) {
 function statementHTML(worker, slips) {
   const rows = slips.map((b) => `
     <tr><td>${fmtDateTime(b.worker_confirmed_at)}</td><td>${esc(b.receipt_no)}</td>
-    <td>${t(b.type)}</td><td>${esc(b.employer_name || '')}</td><td class="num">${money(amountOf(b))}</td></tr>`).join('');
+    <td>${t(b.type)}</td><td>${esc(b.employer_name || '')}</td><td class="num">${money(amountOf(b), b.currency)}</td></tr>`).join('');
   const total = slips.reduce((s, b) => s + amountOf(b), 0);
   return `
     <div class="slip" id="slipPrint">
