@@ -53,8 +53,15 @@ async function saveProfile(event) {
 }
 
 // ---------- Online workers on the map (placed to about 1 km; no phone numbers) ----------
+// Only workers within about 50 km, so each employer's phone doesn't download every online worker in India
+const NEAR_DEG = 0.45;
 async function loadWorkers() {
-  const { data } = await db.from('workers_public').select('*').eq('online', true);
+  const at = E.site || App.here;
+  E.workersAt = { lat: at.lat, lng: at.lng };
+  const { data } = await db.from('workers_public').select('*').eq('online', true)
+    .gte('lat', at.lat - NEAR_DEG).lte('lat', at.lat + NEAR_DEG)
+    .gte('lng', at.lng - NEAR_DEG).lte('lng', at.lng + NEAR_DEG)
+    .limit(300);
   E.workers = data || [];
   drawWorkers();
 }
@@ -244,6 +251,8 @@ function nearestAreaName(p) {
 
 function setSite(p, label) {
   E.site = { lat: p.lat, lng: p.lng };
+  // The site moved to another area: load the workers near it
+  if (!E.workersAt || (kmBetween(E.workersAt, E.site) ?? 0) > 10) loadWorkers();
   if (label) {
     document.getElementById('areaInput').value = label.slice(0, 80);
     E.siteText = label.slice(0, 80);
@@ -483,7 +492,7 @@ function renderBooking() {
   clearInterval(E.searchTimer);
   clearInterval(E.workTimer);
   if (E.crew.length) return renderCrew();
-  const b = E.booking;
+  const b = withSite(E.booking); // the full address (the booking row has only the area)
   if (b && Mat.bookingId !== b.id) {
     Mat.bookingId = b.id;
     Mat.list = [];
@@ -652,7 +661,7 @@ async function refreshWorkerSpots() {
 }
 
 function updateTracking(fit) {
-  const b = E.booking;
+  const b = withSite(E.booking);
   const w = E.worker;
   const visible = b && w && w.lat != null && b.lat != null && ['assigned', 'started'].includes(b.status);
   if (!visible) {
@@ -681,7 +690,7 @@ function offersHTML() {
     return `
       <div class="mini-card offer-card">
         <div><b>${esc(w.name || '')}</b> ${trustedBadge(w)}<br>
-          <span class="muted small">${workerStars(w)}${w.lat != null ? ' · ' + etaText(w, E.booking) : ''}</span></div>
+          <span class="muted small">${workerStars(w)}${w.lat != null ? ' · ' + etaText(w, withSite(E.booking)) : ''}</span></div>
         <button class="btn btn-accept btn-small" onclick="acceptOffer(${o.id})">${tf('acceptOffer', o.amount)}</button>
       </div>`;
   }).join('');
@@ -724,7 +733,7 @@ function crewSlotHTML(b, i) {
   else {
     let action = '';
     if (b.status === 'assigned') {
-      action = `<span class="otp-mini">OTP <b>${otpOf(b)}</b></span>${w && w.lat != null ? ` <small class="muted">🛵 ${etaText(w, b)}</small>` : ''}`;
+      action = `<span class="otp-mini">OTP <b>${otpOf(b)}</b></span>${w && w.lat != null ? ` <small class="muted">🛵 ${etaText(w, withSite(b))}</small>` : ''}`;
     } else if (b.status === 'started') {
       action = `<span class="badge badge-accepted">${statusLabel('started')}</span>`;
     } else if (b.status === 'completed') {
@@ -754,7 +763,7 @@ function renderCrew() {
   document.getElementById('bookingLive').innerHTML = `
     <div class="card job-live">
       <h2>👥 ${tf('teamOf', crew.length, t(first.type))}</h2>
-      <p class="muted">📍 ${esc(first.area)} · ⏱️ ${first.hours} ${t('hoursUnit')} · ${tf('teamFilled', filled, crew.length)}</p>
+      <p class="muted">📍 ${esc(withSite(first).area)} · ⏱️ ${first.hours} ${t('hoursUnit')} · ${tf('teamFilled', filled, crew.length)}</p>
       ${searching.length && !first.scheduled_for ? `<div class="big-timer"><small>${t('slotFinding')}</small><b id="searchClock">10:00</b></div>` : ''}
       <div class="crew">${crew.map(crewSlotHTML).join('')}</div>
       <div class="agreement"><div><span><b>${t('teamTotal')}</b></span><span><b>${money(total)}</b></span></div></div>
@@ -944,8 +953,9 @@ async function refreshBooking() {
   if (data) await onBookingChange({ new: data });
 }
 
-function retryBooking(toEveryone) {
-  const b = E.booking;
+async function retryBooking(toEveryone) {
+  await loadSites([E.booking.id]);
+  const b = withSite(E.booking);
   E.type = b.type; E.hours = b.hours; E.load = b.load; E.risky = b.risky;
   E.preferred = toEveryone ? null : E.workers.find((w) => w.id === b.preferred_worker_id) || null;
   document.getElementById('areaInput').value = b.area;
@@ -1175,8 +1185,9 @@ function rateRecord(i) {
 }
 
 // Book the same worker again (Urban Company "rebook your professional")
-function bookAgain(i) {
-  const b = E.records[i];
+async function bookAgain(i) {
+  await loadSites([E.records[i].id]);
+  const b = withSite(E.records[i]);
   E.type = b.type; E.hours = b.hours; E.load = b.load; E.risky = b.risky;
   document.getElementById('areaInput').value = b.area;
   if (b.lat != null) setSite(b, b.area);
@@ -1223,6 +1234,7 @@ App.onHeat = () => { if (E.me) renderEstimate(); };
 App.onMove = () => {};
 App.onMessages = () => (E.crewChat ? drawCrewChat() : renderBooking());
 App.onOtp = () => { if (!E.crewChat && !E.crewPay) renderBooking(); };
+App.onSite = App.onOtp;
 // A message from a team member whose chat is not open: still tell the employer
 App.onOtherMessage = (m) => {
   const b = E.crew.find((x) => x.id === m.booking_id);
@@ -1257,6 +1269,16 @@ async function startApp() {
   if (!navigator.onLine) return;
   await loadFavorites();
   await loadWorkers();
+  // If this phone already allows location, start from where the employer is (no permission prompt here)
+  if (navigator.permissions && !E.site) {
+    navigator.permissions.query({ name: 'geolocation' }).then((s) => {
+      if (s.state === 'granted') locate((ok) => {
+        if (!ok || E.site) return;
+        if (E.map) E.map.setView([App.here.lat, App.here.lng], 14);
+        loadWorkers();
+      });
+    }).catch(() => {});
+  }
   await loadOpenBooking();
   syncForm();
   listenMaterials((row, kind) => {

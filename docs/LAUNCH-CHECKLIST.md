@@ -38,7 +38,7 @@ Open `/admin/` on the live site to see reports.
 
 ## 4. Privacy notice
 
-Replace `GRIEVANCE_EMAIL` in `privacy/index.html` with the email address of the person who answers privacy complaints, before the page goes live.
+Privacy complaints go to rohcol69@gmail.com (shown on `privacy/index.html`). Change it there if someone else takes them over.
 
 ## 5. Backups
 

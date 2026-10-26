@@ -69,17 +69,23 @@ function drawWageMap() {
 }
 
 // ---------- 14. Dispute room ----------
-const EV = { b: null, employer: null, worker: null, msgs: [], mats: [] };
+const EV = { b: null, party: false, employer: null, worker: null, msgs: [], mats: [] };
 
 async function initEvidence() {
   initLangSelect();
   applyLang();
   App.onLang = () => { applyLang(); drawEvidence(); };
-  const id = new URLSearchParams(location.search).get('b');
-  if (!id) return (document.getElementById('evidence').innerHTML = `<p>${t('evidenceMissing')}</p>`);
-  // Anyone with the link sees the evidence; phone numbers and exact places only the two people on the job
-  const { data } = await db.rpc('dispute_evidence', { p_booking: id });
-  if (!data) return (document.getElementById('evidence').innerHTML = `<p>${t('evidenceMissing')}</p>`);
+  const q = new URLSearchParams(location.search);
+  const id = q.get('b');
+  const token = q.get('t');
+  if (!id && !token) return (document.getElementById('evidence').innerHTML = `<p>${t('evidenceMissing')}</p>`);
+  // ?b=<job>: the two people on the job (signed in on this phone), with phone numbers and the exact place.
+  // ?t=<link>: anyone they shared it with, until the link expires or is stopped, without those.
+  const { data } = token
+    ? await db.rpc('shared_evidence', { p_token: token })
+    : await db.rpc('dispute_evidence', { p_booking: id });
+  if (!data) return (document.getElementById('evidence').innerHTML = `<p>${t(token ? 'evidenceLinkGone' : 'evidenceMissing')}</p>`);
+  EV.party = !!data.party;
   EV.b = data.booking;
   EV.employer = data.employer;
   EV.worker = data.worker;
@@ -134,16 +140,31 @@ function drawEvidence() {
       ${msgs ? `<h3>💬 ${t('quickMessages')}</h3><ul class="timeline">${msgs}</ul>` : ''}
       ${mats ? `<h3>🧾 ${t('materialsTitle')}</h3><ul class="timeline">${mats}</ul>` : ''}
       <p class="muted small">${t('ev_note')}</p>
+      ${EV.party ? `<p class="no-print"><button class="btn btn-light btn-small" onclick="stopSharingEvidence()">${t('evidenceStop')}</button></p>` : ''}
       <p class="muted small">${t('printedOn')}: ${fmtDateTime(new Date().toISOString())}</p>
     </div>`;
 }
 
-function shareEvidence() {
+// The two people on the job share a link that works for 30 days (the job's own page needs their sign-in)
+async function shareEvidence() {
   const b = EV.b;
   if (!b) return;
+  let link = location.href;
+  if (EV.party) {
+    const { data, error } = await db.rpc('share_evidence', { p_booking: b.id });
+    if (error || !data) return showToast(t('saveError'));
+    link = new URL(`?t=${data}`, location.href).href;
+  }
   const lines = [`⚖️ Worker Buddy · ${t('evidenceTitle')} WB-${b.id.slice(0, 8).toUpperCase()}`,
-    ...evidenceEvents(b).map(([at, text]) => `${at ? fmtDateTime(at) : '—'}: ${text}`), location.href];
+    ...evidenceEvents(b).map(([at, text]) => `${at ? fmtDateTime(at) : '—'}: ${text}`), link,
+    EV.party ? t('evidenceLinkNote') : ''].filter(Boolean);
   shareOnWhatsApp(lines.join('\n'));
+}
+
+async function stopSharingEvidence() {
+  if (!EV.b || !EV.party) return;
+  const { error } = await db.rpc('stop_sharing_evidence', { p_booking: EV.b.id });
+  showToast(error ? t('saveError') : t('evidenceStopped'));
 }
 
 // ---------- Text ----------
@@ -155,7 +176,11 @@ Object.assign(T.en, {
   belowFair: 'Below fair range', withinFair: 'Within fair range', aboveFair: 'Above fair range',
   evidenceTitle: 'Job evidence',
   loading: 'Loading…',
-  evidenceMissing: 'This job could not be found.',
+  evidenceMissing: 'This job could not be found. If it is your job, open it from the app on your phone.',
+  evidenceLinkGone: 'This link has expired or was stopped. Ask the worker or employer for a new one.',
+  evidenceLinkNote: 'This link works for 30 days.',
+  evidenceStop: 'Stop all shared links',
+  evidenceStopped: 'Shared links stopped. Nobody else can open them now.',
   ev_timeline: 'What happened, with server times',
   ev_posted: 'Job posted with the fair rate shown',
   ev_accepted: (n) => `Accepted by ${n}`,
@@ -178,7 +203,11 @@ Object.assign(T.ta, {
   belowFair: 'நியாயத்துக்குக் கீழ்', withinFair: 'நியாய வரம்புக்குள்', aboveFair: 'நியாயத்துக்கு மேல்',
   evidenceTitle: 'வேலைச் சான்றுகள்',
   loading: 'ஏற்றுகிறது…',
-  evidenceMissing: 'இந்த வேலையைக் கண்டுபிடிக்க முடியவில்லை.',
+  evidenceMissing: 'இந்த வேலையைக் கண்டுபிடிக்க முடியவில்லை. இது உங்கள் வேலை என்றால், உங்கள் போனில் உள்ள ஆப்பிலிருந்து திறக்கவும்.',
+  evidenceLinkGone: 'இந்த இணைப்பு காலாவதியானது அல்லது நிறுத்தப்பட்டது. வேலையாள் அல்லது முதலாளியிடம் புதியது கேளுங்கள்.',
+  evidenceLinkNote: 'இந்த இணைப்பு 30 நாட்கள் வேலை செய்யும்.',
+  evidenceStop: 'பகிர்ந்த எல்லா இணைப்புகளையும் நிறுத்து',
+  evidenceStopped: 'பகிர்ந்த இணைப்புகள் நிறுத்தப்பட்டன. இனி வேறு யாரும் திறக்க முடியாது.',
   ev_timeline: 'நடந்தது, சர்வர் நேரத்துடன்',
   ev_posted: 'நியாயமான கூலியுடன் வேலை பதிவிடப்பட்டது',
   ev_accepted: (n) => `${n} ஏற்றுக்கொண்டார்`,
@@ -201,7 +230,11 @@ Object.assign(T.hi, {
   belowFair: 'सही से कम', withinFair: 'सही सीमा में', aboveFair: 'सही से ज़्यादा',
   evidenceTitle: 'काम के सबूत',
   loading: 'लोड हो रहा है…',
-  evidenceMissing: 'यह काम नहीं मिला।',
+  evidenceMissing: 'यह काम नहीं मिला। अगर यह आपका काम है, तो अपने फ़ोन के ऐप से खोलें।',
+  evidenceLinkGone: 'यह लिंक खत्म हो गया या बंद कर दिया गया। मज़दूर या मालिक से नया लिंक माँगें।',
+  evidenceLinkNote: 'यह लिंक 30 दिन चलेगा।',
+  evidenceStop: 'शेयर किए सारे लिंक बंद करें',
+  evidenceStopped: 'शेयर किए लिंक बंद हो गए। अब कोई और इन्हें नहीं खोल सकता।',
   ev_timeline: 'क्या हुआ, सर्वर के समय के साथ',
   ev_posted: 'सही मज़दूरी दिखाकर काम पोस्ट हुआ',
   ev_accepted: (n) => `${n} ने माना`,
