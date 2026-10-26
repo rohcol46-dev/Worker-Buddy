@@ -27,6 +27,7 @@ async function ensureSignedIn() {
       const { error } = await db.rpc('claim_profiles', { p_device: deviceId() });
       if (!error) Store.set(key, true);
     }
+    sendConsent();
     return true;
   } catch (e) {
     return false;

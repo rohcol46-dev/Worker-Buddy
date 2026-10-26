@@ -304,3 +304,12 @@ body.onboarding .mic-btn { display: none; }
 .btn-danger { background: #D93025; color: #fff; }
 .cancel-reasons [hidden] { display: none; }
 .acc-btn { white-space: nowrap; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
+
+/* Privacy notice, report and my-data links (js/trust.js) */
+.consent-box { max-height: 90vh; overflow-y: auto; }
+.consent-list { padding-left: 1.2em; margin: 8px 0 12px; line-height: 1.5; }
+.consent-list li + li { margin-top: 6px; }
+.report-link { display: block; margin: 10px auto 0; }
+.cancel-reasons textarea { width: 100%; resize: vertical; }
+.privacy-links { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; padding-top: 10px; border-top: 1px solid #E6E1D8; }
+.privacy-links .danger-link { color: #B3261E; }

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0E1A36">
+  <title>Reports · Worker Buddy</title>
+  <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/theme.css">
+  <style>
+    .admin { max-width: 900px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .report { display: flex; flex-direction: column; gap: 6px; }
+    .report .meta { color: #5b6170; font-size: .85rem; }
+    .report .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 99px; background: #FDE2DD; color: #8E1D0B; font-size: .8rem; font-weight: 700; }
+  </style>
+</head>
+<body data-app="landing">
+  <header class="topbar">
+    <a class="brand" href="../">🛡️ Worker Buddy reports</a>
+    <select id="statusSelect" class="lang-select" aria-label="Which reports">
+      <option value="open">Open</option>
+      <option value="closed">Closed</option>
+      <option value="">All</option>
+    </select>
+  </header>
+  <main class="admin">
+    <p id="note" class="muted">Loading…</p>
+    <div id="list"></div>
+  </main>
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script>
+    // Admin page (supabase/018): open reports, with suspend, unsuspend and close.
+    // Sign in on the worker or employer app first, with the Google account or number listed in public.admins.
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const REASONS = { fake_job: 'Fake job', no_pay: 'Not paid', unsafe: 'Unsafe', abuse: 'Abuse', no_show: 'No show', other: 'Other' };
+
+    function toast(text) {
+      const el = document.getElementById('toast');
+      el.textContent = text;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2800);
+    }
+
+    function el(tag, props, ...kids) {
+      const node = Object.assign(document.createElement(tag), props || {});
+      kids.flat().forEach((k) => node.append(k instanceof Node ? k : document.createTextNode(k == null ? '' : String(k))));
+      return node;
+    }
+
+    function button(label, cls, onClick) {
+      return el('button', { type: 'button', className: `btn btn-small ${cls}`, onclick: onClick }, label);
+    }
+
+    async function act(rpc, args, done) {
+      const { error } = await db.rpc(rpc, args);
+      if (error) return toast(error.message);
+      toast(done);
+      load();
+    }
+
+    function card(r) {
+      const target = r.by_role === 'worker'
+        ? { who: 'employer', name: r.employer_name, phone: r.employer_phone }
+        : { who: 'worker', name: r.worker_name, phone: r.worker_phone };
+      const reporter = r.by_role === 'worker' ? r.worker_name : r.employer_name;
+      const actions = el('div', { className: 'actions' });
+      if (r.target_auth) {
+        if (r.target_suspended_until) {
+          actions.append(button('Lift hold', 'btn-light', () => act('admin_unsuspend', { p_auth: r.target_auth }, 'Hold lifted')));
+        } else {
+          actions.append(
+            button('Suspend 7 days', 'btn-danger', () => act('admin_suspend', { p_auth: r.target_auth, p_days: 7, p_reason: REASONS[r.reason] || r.reason }, 'Suspended for 7 days')),
+            button('Suspend 1 year', 'btn-danger', () => act('admin_suspend', { p_auth: r.target_auth, p_days: 365, p_reason: REASONS[r.reason] || r.reason }, 'Suspended for 1 year')));
+        }
+      }
+      if (r.status === 'open') {
+        const note = el('input', { className: 'input', maxLength: 300, placeholder: 'What you found (optional)' });
+        actions.append(note, button('Close report', 'btn-light', () => act('admin_close_report', { p_id: r.id, p_note: note.value }, 'Report closed')));
+      }
+      return el('div', { className: 'card report' },
+        el('div', null, el('span', { className: 'tag' }, REASONS[r.reason] || r.reason), ' ',
+          el('b', null, `${target.name || 'Deleted user'} (${target.who})`),
+          target.phone ? ` · ${target.phone}` : ''),
+        el('div', { className: 'meta' },
+          `Reported by ${reporter || 'a deleted user'} (${r.by_role}) · ${new Date(r.created_at).toLocaleString('en-IN')} · `,
+          `${r.target_reports} report(s) against this account`,
+          r.target_suspended_until ? ` · on hold until ${new Date(r.target_suspended_until).toLocaleDateString('en-IN')}` : ''),
+        r.note ? el('p', null, `“${r.note}”`) : '',
+        r.booking_id ? el('a', { href: `../dispute/?b=${encodeURIComponent(r.booking_id)}`, target: '_blank', rel: 'noopener' }, 'Job evidence') : '',
+        actions);
+    }
+
+    async function load() {
+      const note = document.getElementById('note');
+      const list = document.getElementById('list');
+      const { data: status, error: e1 } = await db.rpc('my_status');
+      if (e1 || !status || !status.admin) {
+        note.textContent = 'Only Worker Buddy admins can see this page. Sign in on the worker or employer app with an admin account, then come back.';
+        list.replaceChildren();
+        return;
+      }
+      const s = document.getElementById('statusSelect').value;
+      const { data, error } = await db.rpc('admin_reports', { p_status: s || null });
+      if (error) { note.textContent = error.message; return; }
+      note.textContent = data.length ? `${data.length} report(s)` : 'No reports here.';
+      list.replaceChildren(...data.map(card));
+    }
+
+    document.getElementById('statusSelect').addEventListener('change', load);
+    load();
+  </script>
+</body>
+</html>
