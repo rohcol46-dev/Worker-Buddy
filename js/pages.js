@@ -27,9 +27,7 @@ async function initWageMap() {
   WM.map = L.map('wageMap').setView([App.here.lat, App.here.lng], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(WM.map);
   WM.layer = L.layerGroup().addTo(WM.map);
-  const { data } = await db.from('bookings')
-    .select('type,lat,lng,agreed_wage,hours,worker_confirmed_at')
-    .not('worker_confirmed_at', 'is', null).not('lat', 'is', null).limit(2000);
+  const { data } = await db.rpc('wage_map_rows'); // confirmed jobs, placed to about 1 km
   WM.rows = data || [];
   drawWageMap();
 }
@@ -79,19 +77,14 @@ async function initEvidence() {
   App.onLang = () => { applyLang(); drawEvidence(); };
   const id = new URLSearchParams(location.search).get('b');
   if (!id) return (document.getElementById('evidence').innerHTML = `<p>${t('evidenceMissing')}</p>`);
-  const { data: b } = await db.from('bookings').select('*').eq('id', id).maybeSingle();
-  if (!b) return (document.getElementById('evidence').innerHTML = `<p>${t('evidenceMissing')}</p>`);
-  EV.b = b;
-  const [e, w, m, mats] = await Promise.all([
-    db.from('employers').select('name,phone,gstin,jobs,paid_on_time,rating_sum,rating_count,disputes').eq('id', b.employer_id).maybeSingle(),
-    b.worker_id ? db.from('workers').select('name,phone,skill').eq('id', b.worker_id).maybeSingle() : { data: null },
-    db.from('messages').select('*').eq('booking_id', id).order('created_at'),
-    db.from('materials').select('*').eq('booking_id', id).order('id')
-  ]);
-  EV.employer = e.data;
-  EV.worker = w.data;
-  EV.msgs = m.data || [];
-  EV.mats = mats.data || [];
+  // Anyone with the link sees the evidence; phone numbers and exact places only the two people on the job
+  const { data } = await db.rpc('dispute_evidence', { p_booking: id });
+  if (!data) return (document.getElementById('evidence').innerHTML = `<p>${t('evidenceMissing')}</p>`);
+  EV.b = data.booking;
+  EV.employer = data.employer;
+  EV.worker = data.worker;
+  EV.msgs = data.messages || [];
+  EV.mats = data.materials || [];
   drawEvidence();
 }
 
@@ -99,8 +92,8 @@ function evidenceEvents(b) {
   const ev = [[b.created_at, t('ev_posted')]];
   if (b.accepted_at) ev.push([b.accepted_at, tf('ev_accepted', EV.worker ? EV.worker.name : t('worker'))]);
   if (b.started_at) {
-    const km = b.start_lat != null && b.lat != null ? distanceKm({ lat: b.start_lat, lng: b.start_lng }, b) : null;
-    ev.push([b.started_at, km !== null ? tf('ev_startedAt', Math.round(km * 1000)) : t('ev_started')]);
+    // Worked out by the database from the exact points (outsiders only get rounded ones)
+    ev.push([b.started_at, b.start_m != null ? tf('ev_startedAt', b.start_m) : t('ev_started')]);
   }
   if (b.effort_status) {
     ev.push([b.effort_at, `😓 ${t('effortTitle')}: ${effortClaimText(b)} (+₹${b.effort_extra})`]);

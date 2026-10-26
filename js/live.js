@@ -74,6 +74,58 @@ function kmBetween(a, b) {
   return distanceKm({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng });
 }
 
+// ---------- People (supabase/016_private_data_and_fair_pay.sql) ----------
+// Other people's profiles come from workers_public / employers_public: no phone number, and the
+// location rounded to about 1 km. The phone, UPI ID and live location of the person on my own job
+// come from job_contacts.
+async function myProfile(kind) {
+  const { data, error } = await db.rpc(kind === 'worker' ? 'get_my_worker' : 'get_my_employer', { p_device: deviceId() });
+  if (error) throw error;
+  const me = (data || [])[0] || null;
+  if (me && me.device_id) Store.set('device', me.device_id);
+  return me;
+}
+
+// The workers (or employers) on these jobs, by id, with their contact details added.
+// If a lookup fails (bad network), the last details we had are kept so the call and pay buttons stay.
+const KNOWN_PEOPLE = {};
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+async function peopleOn(kind, bookings) {
+  const key = kind === 'worker' ? 'worker_id' : 'employer_id';
+  const jobs = (bookings || []).filter((b) => b && b[key]);
+  const ids = [...new Set(jobs.map((b) => b[key]))];
+  if (!ids.length) return {};
+  const synced = jobs.map((b) => b.id).filter((id) => UUID_RE.test(id)); // queued jobs have a local id
+  const [rowsRes, contactsRes] = await Promise.all([
+    db.from(kind === 'worker' ? 'workers_public' : 'employers_public').select('*').in('id', ids),
+    synced.length ? db.rpc('job_contacts', { p_bookings: synced }) : Promise.resolve({ data: [] })
+  ]);
+  const people = {};
+  ids.forEach((id) => {
+    const known = KNOWN_PEOPLE[id];
+    const row = (rowsRes.data || []).find((p) => p.id === id);
+    if (row) people[id] = contactsRes.error && known ? { ...known, ...row, phone: known.phone, upi_id: known.upi_id, lat: known.lat, lng: known.lng } : row;
+    else if (rowsRes.error && known) people[id] = { ...known };
+  });
+  (contactsRes.data || []).forEach((c) => {
+    const p = people[c.person_id];
+    if (!p) return;
+    if (c.phone) p.phone = c.phone;
+    if (c.upi_id) p.upi_id = c.upi_id;
+    if (c.lat != null) { p.lat = c.lat; p.lng = c.lng; }
+  });
+  Object.values(people).forEach((p) => { KNOWN_PEOPLE[p.id] = p; });
+  return people;
+}
+
+// Overtime per hour: twice the agreed wage per hour (Code on Wages, 2019). The database sets it on every job;
+// a finished job saved on the phone before that was paid at the old flat ₹80.
+function otRate(b) {
+  if (b.ot_rate) return b.ot_rate;
+  if (b.completed_at) return 80;
+  return Math.ceil((b.agreed_wage * 2) / Math.max(b.hours || 8, 4));
+}
+
 // The text worker and employer share on WhatsApp as their work agreement
 function agreementText(b, employerName, workerName) {
   return [

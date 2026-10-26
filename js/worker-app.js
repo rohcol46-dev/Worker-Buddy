@@ -11,6 +11,7 @@ const W = {
   requestEmployer: null,
   declined: new Set(),
   countdown: null,
+  requestCheck: null,
   workTimer: null,
   map: null,
   meMarker: null,
@@ -30,15 +31,7 @@ function cacheState() {
 
 // ---------- Profile ----------
 async function loadMe() {
-  let { data, error } = await db.from('workers').select('*').eq('device_id', deviceId()).maybeSingle();
-  if (error) throw error;
-  const u = !data && (await db.auth.getSession()).data.session;
-  if (u) {
-    const mine = await db.from('workers').select('*').eq('auth_id', u.user.id).order('updated_at', { ascending: false }).limit(1);
-    data = (mine.data || [])[0] || null;
-    if (data && data.device_id) Store.set('device', data.device_id);
-  }
-  W.me = data;
+  W.me = await myProfile('worker');
 }
 
 function editProfile() {
@@ -78,11 +71,11 @@ async function saveProfile(event) {
   if (!ageOk(row.birth_year)) return showToast(t('under18'));
   const movedTo = W.me && W.me.city && row.city && row.city !== W.me.city ? row.city : null;
   const query = W.me
-    ? db.from('workers').update(row).eq('id', W.me.id).select().single()
-    : db.from('workers').insert({ ...row, device_id: deviceId(), lat: App.here.lat, lng: App.here.lng }).select().single();
-  const { data, error } = await query;
+    ? db.from('workers').update(row).eq('id', W.me.id)
+    : db.from('workers').insert({ ...row, device_id: deviceId(), lat: App.here.lat, lng: App.here.lng });
+  const { error } = await query;
   if (error) return showToast(t('saveError'));
-  W.me = data;
+  await loadMe();
   cacheState();
   renderAccount();
   enterOnboarding(false);
@@ -112,9 +105,9 @@ async function toggleDuty() {
     update.lat = App.here.lat;
     update.lng = App.here.lng;
   }
-  const { data, error } = await db.from('workers').update(update).eq('id', W.me.id).select().single();
+  const { error } = await db.from('workers').update(update).eq('id', W.me.id);
   if (error) return showToast(t('saveError'));
-  W.me = data;
+  W.me = { ...W.me, ...update };
   cacheState();
   renderHome();
   if (online) checkOpenRequests();
@@ -170,6 +163,8 @@ function listen() {
   db.channel('worker-bookings')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => onBookingChange(payload))
     .subscribe();
+  // A later job taken by someone else no longer comes as a live update (only its two people can read it)
+  setInterval(() => { if (!document.hidden) loadLaterJobs(); }, 60000);
   listenMessages((m) => {
     if (m.sender !== 'worker') {
       showToast(`💬 ${t('ph_' + m.phrase)}`);
@@ -215,8 +210,8 @@ function onBookingChange(payload) {
     delete W.offers[b.id];
     if (W.request) closeRequest();
     W.active = b;
-    db.from('employers').select('*').eq('id', b.employer_id).maybeSingle().then(async ({ data }) => {
-      W.employer = data;
+    peopleOn('employer', [b]).then(async (people) => {
+      W.employer = people[b.employer_id] || null;
       await loadMessages(b.id);
       cacheState();
       renderHome();
@@ -274,7 +269,7 @@ function requestSpeech(b, employer) {
 
 async function showRequest(b) {
   W.request = b;
-  const { data: employer } = await db.from('employers').select('*').eq('id', b.employer_id).maybeSingle();
+  const { data: employer } = await db.from('employers_public').select('*').eq('id', b.employer_id).maybeSingle();
   if (!W.request || W.request.id !== b.id) return; // gone while loading
   W.requestEmployer = employer;
   const km = kmBetween(App.here, b);
@@ -340,6 +335,18 @@ async function showRequest(b) {
     if (txt) txt.textContent = Math.ceil(left);
     if (left <= 0) declineRequest();
   }, 250);
+
+  // Once a job is taken or cancelled it is no longer mine to read, so no live update says so: ask every 4 seconds
+  clearInterval(W.requestCheck);
+  W.requestCheck = setInterval(async () => {
+    if (!W.request || W.request.id !== b.id || !navigator.onLine) return;
+    const { data, error } = await db.from('bookings').select('id').eq('id', b.id).eq('status', 'searching').maybeSingle();
+    if (error || data || !W.request || W.request.id !== b.id) return;
+    closeRequest();
+    showToast(t('requestGone'));
+    checkOpenRequests();
+    loadLaterJobs();
+  }, 4000);
 }
 
 // Counter-offer (inDrive): ask for more within the fair range; the employer decides
@@ -357,6 +364,7 @@ async function makeOffer(amount) {
 
 function closeRequest() {
   clearInterval(W.countdown);
+  clearInterval(W.requestCheck);
   W.request = null;
   closeModal('requestModal');
 }
@@ -383,7 +391,8 @@ async function acceptRequest() {
     return loadLaterJobs();
   }
   W.active = data;
-  W.employer = employer;
+  // Now that the job is mine, the employer's phone number comes with their profile
+  W.employer = (await peopleOn('employer', [data]))[data.employer_id] || employer;
   if (isNightJob(data)) showToast(t('nightShare'));
   await loadMessages(W.active.id);
   cacheState();
@@ -399,10 +408,7 @@ async function loadActive() {
     .order('accepted_at', { ascending: false }).limit(10);
   W.active = (data || []).find((b) => !(b.status === 'assigned' && isLater(b))) || null;
   W.employer = null;
-  if (W.active) {
-    const { data: e } = await db.from('employers').select('*').eq('id', W.active.employer_id).maybeSingle();
-    W.employer = e;
-  }
+  if (W.active) W.employer = (await peopleOn('employer', [W.active]))[W.active.employer_id] || null;
   await loadMessages(W.active ? W.active.id : null);
   cacheState();
 }
@@ -462,7 +468,7 @@ function renderActive() {
   } else if (b.status === 'completed') {
     speech = tf('waitingPayment', amount + approvedMaterials());
     action = `<p class="wait-pay"><span class="pulse-dot"></span>${tf('waitingPayment', amount + approvedMaterials())} ${speakButton(speech)}</p>
-      ${b.overtime_hours ? `<p class="overtime">${t('overtimeLabel')}: ${b.overtime_hours} h · +₹${80 * b.overtime_hours}</p>` : ''}
+      ${b.overtime_hours ? `<p class="overtime">${t('overtimeLabel')}: ${b.overtime_hours} h · +₹${otRate(b) * b.overtime_hours}</p>` : ''}
       ${b.travel_pay ? `<p class="small">${tf('travelTag', b.travel_pay)}</p>` : ''}
       ${b.rain_off ? `<p class="overtime">${tf('rainNote', amount)}</p>` : ''}
       ${W.me.upi_id ? `<button class="btn btn-upi btn-block btn-big" onclick="showUpiQR(W.active, W.me, amountOf(W.active) + approvedMaterials())">${tf('myUpiQrBtn', amount + approvedMaterials())}</button>`
@@ -564,7 +570,7 @@ async function completeWork() {
   if (r.queued) {
     const extra = overtimeSoFar(W.active);
     return localUpdate({ status: 'completed', completed_at: new Date().toISOString(),
-      overtime_hours: extra, paid_amount: W.active.agreed_wage + 80 * extra });
+      overtime_hours: extra, paid_amount: W.active.agreed_wage + otRate(W.active) * extra + (W.active.travel_pay || 0) });
   }
   if (r.error || !r.data) return showToast(t('saveError'));
   await refreshActive();
@@ -736,10 +742,9 @@ async function loadRecords() {
   const { data } = await db.from('bookings').select('*').eq('worker_id', W.me.id)
     .order('created_at', { ascending: false }).limit(100);
   const list = data || [];
-  const ids = [...new Set(list.map((b) => b.employer_id))];
-  const { data: emps } = ids.length ? await db.from('employers').select('id,name,phone').in('id', ids) : { data: [] };
+  const emps = await peopleOn('employer', list);
   list.forEach((b) => {
-    const e = (emps || []).find((x) => x.id === b.employer_id) || {};
+    const e = emps[b.employer_id] || {};
     b.employer_name = e.name || '';
     b.employer_phone = e.phone || '';
   });

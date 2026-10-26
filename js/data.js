@@ -41,10 +41,16 @@ function dayFromToday(days) {
 }
 
 // ---------- Work types ----------
-// Base daily wage range in ₹ for 8 hours. ESTIMATES, not exact rates.
+// Legal floor for an 8-hour day: Tamil Nadu minimum wage, "construction or maintenance of roads and
+// buildings": ₹606.60 to Mar 2026, VDA from 1 Apr 2026 per notification Z3/3459/2026 (₹609.30 reported),
+// rounded up. No per-trade figure could be confirmed, so it is the floor for every kind of work. The same
+// number is in the min_wages table (supabase/016_private_data_and_fair_pay.sql): change both together.
+const MIN_WAGE_DAY = 610;
+
+// Base daily wage range in ₹ for 8 hours. ESTIMATES, never below MIN_WAGE_DAY.
 const WORK_TYPES = {
-  coolie:      { icon: '🧱', min: 500, max: 700 },
-  helper:      { icon: '🦺', min: 500, max: 650 },
+  coolie:      { icon: '🧱', min: 610, max: 700 },
+  helper:      { icon: '🦺', min: 610, max: 650 },
   plumber:     { icon: '🔧', min: 700, max: 1000 },
   electrician: { icon: '⚡', min: 800, max: 1100 },
   mason:       { icon: '🏗️', min: 750, max: 1000 },
