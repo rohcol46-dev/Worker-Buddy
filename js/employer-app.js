@@ -396,7 +396,7 @@ async function bookWorker() {
   btn.disabled = true;
   const made = await sendPost(post);
   btn.disabled = false;
-  if (!made) return showToast(t('saveError'));
+  if (!made) return trustError(E.postError) || showToast(t('saveError'));
   showPosted(made);
 }
 
@@ -415,6 +415,7 @@ async function sendPost(post) {
     if (rep) rows.forEach((r) => { r.repeat_id = rep.id; });
   }
   const { data: made, error } = await db.from('bookings').insert(rows).select();
+  E.postError = error || null;
   return error || !made || !made.length ? null : made;
 }
 
@@ -428,6 +429,7 @@ async function flushPosts() {
     return show('bookings');
   }
   let last = null;
+  const keep = [];   // refused by a safety check (sign in first, too many posts): try again later
   for (const post of queue) {
     const now = !post.rows[0].scheduled_for;
     // A "now" job saved more than an hour ago is out of date: do not ring workers for it
@@ -435,7 +437,12 @@ async function flushPosts() {
     if (!now && Date.parse(post.rows[0].scheduled_for) < Date.now()) { showToast(t('postTooOld')); continue; }
     const made = await sendPost(post);
     if (made) last = made;
+    else if (E.postError && ['verify_first', 'suspended', 'slow_down'].includes(E.postError.message)) {
+      if (!keep.length) trustError(E.postError);
+      keep.push(post);
+    }
   }
+  if (keep.length) Store.set('post_queue', [...keep, ...(Store.get('post_queue', []) || [])]);
   if (!last) return;
   showToast(t('postSentNow'));
   if (!E.booking && !E.crew.length) showPosted(last);
@@ -601,6 +608,7 @@ function renderBooking() {
       ${b.status !== 'paid' || !b.worker_confirmed_at ? messagesHTML('employer', w.name) : ''}
       ${again}
       <button class="btn btn-light btn-block" onclick="shareOnWhatsApp(agreementText(E.booking, E.me.name, (E.worker || {}).name || ''))">${t('shareAgreement')}</button>
+      ${reportLinkHTML(b.id, 'employer')}
     </div>`;
 
   if (b.status === 'started' && b.started_at) {
@@ -686,6 +694,7 @@ async function refreshOffers() {
 
 async function acceptOffer(id) {
   const { data, error } = await db.rpc('accept_offer', { p_booking: E.booking.id, p_employer: E.me.id, p_offer: id });
+  if (error && trustError(error)) return refreshOffers();
   if (error || !data || !data.id) {
     showToast(t('offerGone'));
     return refreshOffers();
@@ -1281,6 +1290,7 @@ async function startApp() {
 async function init() {
   initLangSelect();
   applyLang();
+  await ensureConsent();
   registerOffline();
   document.getElementById('onboardForm').addEventListener('submit', saveProfile);
   document.querySelectorAll('.bottom-nav button').forEach((b) => b.addEventListener('click', () => show(b.dataset.go)));

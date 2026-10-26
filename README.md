@@ -148,6 +148,20 @@ Workers never pay. Ways to keep it running, to discuss on the pitch slide:
 
 Database tables: `workers`, `employers`, `bookings`, `messages`, `offers`, `rest_points`, `heat_reports`, `materials`, `favorites`, `repeat_jobs`, `crew_members`, `crew_attendance`. Bookings change state only through database functions (`accept_booking`, `start_booking`, `complete_booking`, `pay_booking`, `confirm_payment`, `cancel_booking`, `worker_cancel`, `review_booking`, `make_offer`, `accept_offer`, `start_at_site`, `rain_stop`, `pay_showup`, `decide_material`, `confirm_by_qr`). The SQL is in `supabase/`.
 
+## Safety and privacy
+
+| What | How |
+|---|---|
+| **Real accounts** | A switch (`app_settings.require_verified`) makes posting and taking jobs need Google or a verified mobile number. The profile phone comes from the verified number |
+| **Limits** | About 6 job posts an hour, 20 offers in 10 minutes and 10 reports a day per account |
+| **Report and block** | ⚠️ on every live job, both apps. A block hides that employer's jobs and stops the pair working together. Three people reporting one account put it on hold for 7 days |
+| **Admins** | `/admin/` lists reports, with suspend, lift hold and close |
+| **Privacy** | A notice in 3 languages before first use, consent saved per account, `/privacy/` page, download my data, delete my account, old locations wiped every night |
+| **Backups** | Nightly encrypted copy (`.github/workflows/backup.yml`); see `docs/BACKUP-AND-RESTORE.md` |
+| **Tests** | `supabase/tests/run.sh` on every pull request |
+
+Steps done by hand in the dashboards are in `docs/LAUNCH-CHECKLIST.md`.
+
 ## Run it on your laptop
 
 ```bash
@@ -192,6 +206,11 @@ Open http://localhost:5500. For the live demo, open `/employer/` on one phone or
 | `js/live.js` | Database connection, booking helpers, popups | Member 4 |
 | `js/data.js` | Work types, places, schemes, English/Tamil text | Member 4 |
 | `js/config.js` | Supabase address and publishable key | Member 4 |
+| `js/trust.js` | Privacy notice and consent, report and block, download or delete my data | Member 4 |
+| `privacy/` | Privacy notice and terms (English, Tamil, Hindi) | Member 4 |
+| `admin/` | Reports and suspensions, for admins only | Member 4 |
+| `supabase/tests/` | Builds the database from every migration and checks the safety rules (runs on every pull request) | Member 4 |
+| `docs/` | Launch checklist, backups and restore | Member 4 |
 | `sw.js` | Offline support | Member 4 |
 | `supabase/*.sql` | Database tables and functions | Member 4 |
 | `css/style.css`, `css/live.css` | Look and layout | Member 4 |

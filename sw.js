@@ -2,7 +2,7 @@
 // App files come from the network when online (so a new version shows at once) and from the
 // phone when offline; map tiles seen before are kept too.
 // Live data (Supabase, weather, places) always goes to the network.
-const VERSION = 'wb-v20';
+const VERSION = 'wb-v21';
 const APP_FILES = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const APP_FILES = [
   './js/safety.js',
   './js/live.js',
   './js/account.js',
+  './js/trust.js',
   './js/features.js',
   './js/lang-hi.js',
   './js/extras.js',
@@ -29,6 +30,8 @@ const APP_FILES = [
   './wages/index.html',
   './dispute/',
   './dispute/index.html',
+  './privacy/',
+  './privacy/index.html',
   './js/worker-app.js',
   './js/employer-app.js',
   './worker/',

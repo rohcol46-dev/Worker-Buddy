@@ -95,6 +95,9 @@ async function accSignOut() {
 // After Google comes back, or the SMS code is right: reload so the app opens this account's profile
 async function accSignedIn() {
   await accUser();
+  // A verified mobile number replaces the typed number on this account's profiles (supabase/018)
+  if (Acc.user && Acc.user.phone) await db.rpc('sync_my_phone');
+  sendConsent();
   showToast(t('accDone'));
   if (Acc.onSignedIn) await Acc.onSignedIn();
   renderAccount();
@@ -127,7 +130,7 @@ function accountHTML() {
          </form>`;
   }
   const out = linked ? `<button type="button" class="link-btn small" onclick="accSignOut()">${t('accSignOut')}</button>` : '';
-  return head + google + (phone ? `<p class="small acc-or">${t(Acc.haveProfile() && !linked ? 'accOrPhoneLink' : 'accOrPhone')}</p>${phone}` : '') + out;
+  return head + google + (phone ? `<p class="small acc-or">${t(Acc.haveProfile() && !linked ? 'accOrPhoneLink' : 'accOrPhone')}</p>${phone}` : '') + out + privacyLinksHTML();
 }
 
 async function renderAccount() {
@@ -175,7 +178,7 @@ async function initAccount(haveProfile, onSignedIn) {
   await accUser();
   renderAccount();
   db.auth.onAuthStateChange((event) => {
-    if (event === 'SIGNED_IN' || event === 'USER_UPDATED') accUser().then(renderAccount);
+    if (event === 'SIGNED_IN' || event === 'USER_UPDATED') accUser().then(renderAccount).then(sendConsent);
   });
 }
 

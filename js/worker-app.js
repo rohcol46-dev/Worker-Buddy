@@ -354,6 +354,7 @@ async function makeOffer(amount) {
   if (!W.request) return;
   const b = W.request;
   const { data, error } = await db.rpc('make_offer', { p_booking: b.id, p_worker: W.me.id, p_amount: amount });
+  if (error && trustError(error)) return;
   if (error || !data || !data.id) return showToast(t('requestGone'));
   W.offers[b.id] = amount;
   W.declined.add(b.id); // don't ring again for this job
@@ -381,6 +382,7 @@ async function acceptRequest() {
   const employer = W.requestEmployer;
   const { data, error } = await db.rpc('accept_booking', { p_booking: b.id, p_worker: W.me.id });
   closeRequest();
+  if (error && trustError(error)) return;
   if (error || !data || !data.id) {
     showToast(t('takenByOther'));
     return checkOpenRequests();
@@ -516,6 +518,7 @@ function renderActive() {
       ${['started', 'completed'].includes(b.status) ? materialsHTML('worker', b.status) : ''}
       ${rate}
       ${b.status !== 'paid' || !b.worker_confirmed_at ? messagesHTML('worker', e.name) : ''}
+      ${reportLinkHTML(b.id, 'worker')}
       <div class="row">
         <button class="btn btn-light" onclick="show('safety')">${t('nearbyBtn')}</button>
         <button class="btn btn-light" onclick="shareOnWhatsApp(agreementText(W.active, (W.employer || {}).name || '', W.me.name))">${t('shareAgreement')}</button>
@@ -663,6 +666,7 @@ function renderLaterJobs() {
 
 async function acceptLater(id) {
   const { data, error } = await db.rpc('accept_booking', { p_booking: id, p_worker: W.me.id });
+  if (error && trustError(error)) return;
   if (error || !data || !data.id) {
     showToast(t('takenByOther'));
     return loadLaterJobs();
@@ -894,6 +898,7 @@ App.onVoice = (cmd, digits) => {
 async function init() {
   initLangSelect();
   applyLang();
+  await ensureConsent();
   registerOffline();
   fillSelect(document.getElementById('skillSelect'), 'coolie');
   document.getElementById('onboardForm').addEventListener('submit', saveProfile);
