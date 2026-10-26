@@ -466,7 +466,7 @@ function renderActive() {
     if (W.jobMarker) { W.jobMarker.remove(); W.jobMarker = null; }
     return;
   }
-  const b = W.active;
+  const b = withSite(W.active); // the exact site and full address, now that the job is mine
   const e = W.employer || { name: '—', phone: '' };
   if (Mat.bookingId !== b.id) {
     Mat.bookingId = b.id;
@@ -475,6 +475,7 @@ function renderActive() {
   }
   if (W.map && b.lat != null) {
     if (!W.jobMarker) W.jobMarker = L.marker([b.lat, b.lng], { icon: pin(WORK_TYPES[b.type].icon, 'pin-job') }).addTo(W.map);
+    W.jobMarker.setLatLng([b.lat, b.lng]); // moves to the exact site once it arrives
     W.map.fitBounds([[App.here.lat, App.here.lng], [b.lat, b.lng]], { padding: [40, 40], maxZoom: 15 });
   }
   const amount = amountOf(b);
@@ -588,7 +589,6 @@ function renderActive() {
 async function startWork() {
   const otp = document.getElementById('otpInput').value.trim();
   if (!/^\d{4}$/.test(otp)) return showToast(t('wrongOtp'));
-  Store.set('otp_' + W.active.id, otp); // lets this phone check the employer's pay QR offline
   await new Promise((resolve) => locate(() => resolve()));
   const r = await callAction('start_at_site', {
     p_booking: W.active.id, p_worker: W.me.id, p_otp: otp, p_lat: App.here.lat, p_lng: App.here.lng
@@ -629,7 +629,7 @@ function sendMyLocation() {
   db.from('workers').update({ lat: App.here.lat, lng: App.here.lng }).eq('id', W.me.id).then(() => {});
   if (W.meMarker) W.meMarker.setLatLng([App.here.lat, App.here.lng]);
   const eta = document.querySelector('#activeJob .eta');
-  if (eta && W.active) eta.textContent = `🛵 ${etaText(App.here, W.active)}`;
+  if (eta && W.active) eta.textContent = `🛵 ${etaText(App.here, withSite(W.active))}`;
 }
 
 // Can't come (Rapido captain cancel): the job goes back to other workers
@@ -672,6 +672,7 @@ async function loadLaterJobs() {
 }
 
 function laterCard(b, mine) {
+  if (mine) b = withSite(b);
   const km = kmBetween(App.here, b);
   return `
     <div class="mini-card">
@@ -709,7 +710,8 @@ async function acceptLater(id) {
   loadLaterJobs();
 }
 
-// QR proof of pay: scan the employer's QR; checked on this phone with the OTP, so it works offline
+// QR proof of pay: scan the employer's QR. Only the database can check it (the employer's pay secret
+// never comes to this phone); with no internet it is saved and checked when the internet is back.
 function scanQR() {
   scanPayQR(async (text) => {
     closeQR();
@@ -718,8 +720,6 @@ function scanQR() {
     if (/^upi:/i.test(text)) return showToast(t('qrIsUpi'));
     const b = W.active;
     if (!b || !p || p.wb !== 1 || !p.a || (p.b && p.b !== b.id)) return showToast(t('qrWrong'));
-    const otp = Store.get('otp_' + b.id, null);
-    if (otp && (await payCode(otp, p.a, b.id)) !== p.c) return showToast(t('qrWrong'));
     const r = await callAction('confirm_by_qr', { p_booking: b.id, p_worker: W.me.id, p_amount: p.a, p_code: p.c });
     if (r.queued) {
       const now = new Date().toISOString();
@@ -854,6 +854,7 @@ function openRecordSlip(i) {
 }
 
 // ---------- Start ----------
+App.onSite = () => { renderActive(); renderLaterJobs(); };
 App.onLang = () => {
   applyLang();
   fillSelect(document.getElementById('skillSelect'), W.me ? W.me.skill : 'coolie');
@@ -998,7 +999,7 @@ async function init() {
 // Road distance arrived: redraw the arrival line
 window.addEventListener('wb-eta', () => {
   const eta = document.querySelector('#activeJob .eta');
-  if (eta && W.active) eta.textContent = `🛵 ${etaText(App.here, W.active)}`;
+  if (eta && W.active) eta.textContent = `🛵 ${etaText(App.here, withSite(W.active))}`;
 });
 
 init();

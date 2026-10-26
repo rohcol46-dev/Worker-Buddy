@@ -161,9 +161,10 @@ async function decideEffort(ok, id) {
 }
 
 // ---------- 2. QR proof of pay ----------
-// Code = first 10 hex of SHA-256("OTP:amount:bookingId"). Only the two phones in the job know the OTP.
-async function payCode(otp, amount, bookingId) {
-  const bytes = new TextEncoder().encode(`${otp}:${amount}:${bookingId}`);
+// Code = first 10 hex of SHA-256("secret:amount:bookingId"). The pay secret is only ever sent to the
+// employer's phone (booking_pay_secrets), so a worker can't make a receipt alone; the database checks it.
+async function payCode(secret, amount, bookingId) {
+  const bytes = new TextEncoder().encode(`${secret}:${amount}:${bookingId}`);
   const hash = await crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(hash)).map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 10);
 }
@@ -189,7 +190,8 @@ function closeQR() {
 // Employer: show the QR the worker scans. Works with no internet.
 async function showPayQR(b, amount) {
   await loadOtps([b.id]);
-  const code = await payCode(otpOf(b), amount, b.id);
+  if (!PaySecret[b.id]) return showToast(t('offlineBanner')); // never fetched on this phone yet
+  const code = await payCode(PaySecret[b.id], amount, b.id);
   const payload = JSON.stringify({ wb: 1, b: b.id, a: amount, c: code });
   let svg = '';
   if (typeof qrcode === 'function') {
@@ -561,13 +563,19 @@ Object.assign(T.hi, {
 
 // ---------- Private OTP: only the job's employer can read it (booking_otps table) ----------
 const Otp = Store.get('e_otps', {}) || {};
+const PaySecret = Store.get('e_pay', {}) || {};
 const OtpAsked = new Set();
 async function loadOtps(ids) {
-  const need = ids.filter((id) => id && !Otp[id]);
+  const need = ids.filter((id) => id && (!Otp[id] || !PaySecret[id]));
   if (!need.length || !navigator.onLine) return;
-  const { data } = await db.from('booking_otps').select('booking_id,otp').in('booking_id', need);
-  (data || []).forEach((r) => { Otp[r.booking_id] = r.otp; });
-  Store.set('e_otps', Otp); // the employer can still show it with no internet
+  const [otps, secrets] = await Promise.all([
+    db.from('booking_otps').select('booking_id,otp').in('booking_id', need),
+    db.from('booking_pay_secrets').select('booking_id,secret').in('booking_id', need)
+  ]);
+  (otps.data || []).forEach((r) => { Otp[r.booking_id] = r.otp; });
+  (secrets.data || []).forEach((r) => { PaySecret[r.booking_id] = r.secret; });
+  Store.set('e_otps', Otp); // the employer can still show them with no internet
+  Store.set('e_pay', PaySecret);
 }
 // Shows the OTP if known; otherwise fetches it once and redraws
 function otpOf(b) {
