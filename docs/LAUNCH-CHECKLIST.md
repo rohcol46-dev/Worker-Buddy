@@ -8,7 +8,7 @@ Supabase → **SQL Editor** → paste and run, one at a time:
 
 1. `supabase/018_trust_and_safety.sql`
 2. `supabase/019_privacy.sql`
-3. Any 020 to 029 files from other pull requests, then `supabase/030_country_packs.sql` (country packs: phone numbers in international form, a country and currency on every job)
+3. `supabase/020_scale_and_reliability.sql` and `supabase/021_trustworthy_pay_slips.sql` (already run on 26 Oct 2026), then `supabase/030_country_packs.sql` (country packs: phone numbers in international form, a country and currency on every job)
 
 The new app files expect these, so run them **before** the new version goes live on Vercel.
 
