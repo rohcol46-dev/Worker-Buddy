@@ -149,4 +149,24 @@ do $$ begin
   assert not exists (select 1 from public.booking_sites where booking_id = '40000000-0000-0000-0000-000000000001'), 'site deleted';
 end $$;
 
+-- Area names on open jobs
+do $$ begin
+  assert public.coarse_area('12, Gandhi Road, Velachery') = 'Velachery', 'commas';
+  assert public.coarse_area('12 Gandhi Road Velachery') = 'Velachery', 'no commas';
+  assert public.coarse_area('Anna Nagar') = 'Anna Nagar', 'short name stays';
+  assert public.coarse_area('Velachery,') = 'Velachery', 'trailing comma';
+  assert public.coarse_area('Plot 4B') = 'Plot', 'house numbers dropped';
+  assert public.coarse_area('42') is null, 'only a number';
+end $$;
+
+-- Admins see the evidence by job id
+insert into public.admins (auth_id, note) values ('00000000-0000-0000-0000-0000000000e9', 'test admin 04')
+  on conflict do nothing;
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000e9', false);
+do $$ begin
+  assert public.dispute_evidence('40000000-0000-0000-0000-000000000001') is not null, 'admin sees evidence';
+end $$;
+reset role;
+
 select 'pay slips: ok' as result;

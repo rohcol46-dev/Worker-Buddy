@@ -732,7 +732,7 @@ function crewSlotHTML(b, i) {
   else {
     let action = '';
     if (b.status === 'assigned') {
-      action = `<span class="otp-mini">OTP <b>${otpOf(b)}</b></span>${w && w.lat != null ? ` <small class="muted">🛵 ${etaText(w, b)}</small>` : ''}`;
+      action = `<span class="otp-mini">OTP <b>${otpOf(b)}</b></span>${w && w.lat != null ? ` <small class="muted">🛵 ${etaText(w, withSite(b))}</small>` : ''}`;
     } else if (b.status === 'started') {
       action = `<span class="badge badge-accepted">${statusLabel('started')}</span>`;
     } else if (b.status === 'completed') {
@@ -952,7 +952,8 @@ async function refreshBooking() {
   if (data) await onBookingChange({ new: data });
 }
 
-function retryBooking(toEveryone) {
+async function retryBooking(toEveryone) {
+  await loadSites([E.booking.id]);
   const b = withSite(E.booking);
   E.type = b.type; E.hours = b.hours; E.load = b.load; E.risky = b.risky;
   E.preferred = toEveryone ? null : E.workers.find((w) => w.id === b.preferred_worker_id) || null;
@@ -1183,7 +1184,8 @@ function rateRecord(i) {
 }
 
 // Book the same worker again (Urban Company "rebook your professional")
-function bookAgain(i) {
+async function bookAgain(i) {
+  await loadSites([E.records[i].id]);
   const b = withSite(E.records[i]);
   E.type = b.type; E.hours = b.hours; E.load = b.load; E.risky = b.risky;
   document.getElementById('areaInput').value = b.area;

@@ -84,12 +84,20 @@ alter table public.booking_sites enable row level security;
 -- No policies: read through job_sites()
 revoke all on public.booking_sites from anon, authenticated;
 
--- "12, Gandhi Road, Velachery" → "Velachery"
+-- "12, Gandhi Road, Velachery" → "Velachery"; "12 Gandhi Road Velachery" → "Velachery";
+-- "Anna Nagar" stays. Words with digits (house and plot numbers) are always dropped.
 create function public.coarse_area(p text) returns text
-language sql immutable set search_path = '' as $$
-  select case when p is null or position(',' in p) = 0 then p
-              else nullif(btrim(regexp_replace(p, '^.*,', '')), '') end
-$$;
+language plpgsql immutable set search_path = '' as $$
+declare s text; words text[];
+begin
+  if p is null then return null; end if;
+  s := btrim(p, ' ,');
+  if position(',' in s) > 0 then s := btrim(regexp_replace(s, '^.*,', '')); end if;
+  words := array(select w from regexp_split_to_table(s, '\s+') w where w <> '' and w !~ '[0-9]');
+  if array_length(words, 1) is null then return null; end if;
+  if array_length(words, 1) >= 3 then words := words[array_length(words, 1):]; end if;
+  return array_to_string(words, ' ');
+end $$;
 
 create function public.site_hide() returns trigger language plpgsql security definer set search_path = '' as $$
 begin
@@ -97,7 +105,7 @@ begin
   on conflict (booking_id) do update set lat = excluded.lat, lng = excluded.lng, address = excluded.address;
   new.lat := round(new.lat::numeric, 2)::double precision;   -- about 1 km
   new.lng := round(new.lng::numeric, 2)::double precision;
-  new.area := coalesce(public.coarse_area(new.area), new.area);
+  new.area := coalesce(public.coarse_area(new.area), '📍');
   return new;
 end $$;
 revoke execute on function public.site_hide() from public, anon, authenticated;
@@ -106,15 +114,16 @@ revoke execute on function public.site_hide() from public, anon, authenticated;
 insert into public.booking_sites (booking_id, lat, lng, address) select id, lat, lng, area from public.bookings;
 update public.bookings
    set lat = round(lat::numeric, 2)::double precision, lng = round(lng::numeric, 2)::double precision,
-       area = coalesce(public.coarse_area(area), area);
+       area = coalesce(public.coarse_area(area), '📍');
 
 create trigger bookings_site_hide before insert on public.bookings
   for each row execute function public.site_hide();
 
--- Deleting an account (019 clears the job's lat/lng) also deletes the exact sites and addresses
+-- Deleting an account (019 clears the job's lat/lng) also deletes the exact sites and addresses,
+-- including jobs that never had a map point
 create function public.site_forget() returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-  if new.lat is null and old.lat is not null then
+  if new.lat is null then
     delete from public.booking_sites where booking_id = new.id;
   end if;
   return new;
@@ -237,10 +246,10 @@ begin
 end $$;
 revoke execute on function public.evidence_json(uuid, boolean) from public, anon, authenticated;
 
--- By job id: only the two people on the job
+-- By job id: only the two people on the job, and admins checking a report
 create or replace function public.dispute_evidence(p_booking uuid) returns jsonb
 language sql stable security definer set search_path = '' as $$
-  select case when public.job_party(p_booking) then public.evidence_json(p_booking, true) end
+  select case when public.job_party(p_booking) or public.is_admin() then public.evidence_json(p_booking, true) end
 $$;
 revoke execute on function public.dispute_evidence(uuid) from anon;
 

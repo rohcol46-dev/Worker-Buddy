@@ -556,9 +556,9 @@ function renderActive() {
       ${reportLinkHTML(b.id, 'worker')}
       <div class="row">
         <button class="btn btn-light" onclick="show('safety')">${t('nearbyBtn')}</button>
-        <button class="btn btn-light" onclick="shareOnWhatsApp(agreementText(W.active, (W.employer || {}).name || '', W.me.name))">${t('shareAgreement')}</button>
+        <button class="btn btn-light" onclick="shareOnWhatsApp(agreementText(withSite(W.active), (W.employer || {}).name || '', W.me.name))">${t('shareAgreement')}</button>
       </div>
-      ${['assigned', 'started'].includes(b.status) ? `<button class="btn btn-whatsapp btn-block" onclick="shareWithFamily(W.active, W.employer, W.me)">${t('shareFamily')}</button>` : ''}
+      ${['assigned', 'started'].includes(b.status) ? `<button class="btn btn-whatsapp btn-block" onclick="shareWithFamily(withSite(W.active), W.employer, W.me)">${t('shareFamily')}</button>` : ''}
     </div>`;
 
   if (b.status === 'started' && b.started_at) {
@@ -721,13 +721,8 @@ function scanQR() {
     const b = W.active;
     if (!b || !p || p.wb !== 1 || !p.a || (p.b && p.b !== b.id)) return showToast(t('qrWrong'));
     const r = await callAction('confirm_by_qr', { p_booking: b.id, p_worker: W.me.id, p_amount: p.a, p_code: p.c });
-    if (r.queued) {
-      const now = new Date().toISOString();
-      localUpdate({ status: 'paid', paid_amount: p.a, paid_at: now, worker_confirmed_at: now,
-        receipt_no: 'WB-' + b.id.replace(/-/g, '').slice(0, 8).toUpperCase() });
-      showToast(t('qrSavedOffline'));
-      return openSlip(W.active, W.employer, W.me);
-    }
+    // No internet: sent later. The slip appears only once the database has checked the code.
+    if (r.queued) return showToast(t('qrSavedOffline'));
     if (r.error || !r.data || !r.data.id) return showToast(t('qrWrong'));
     W.active = r.data;
     cacheState();

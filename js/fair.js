@@ -190,7 +190,7 @@ function closeQR() {
 // Employer: show the QR the worker scans. Works with no internet.
 async function showPayQR(b, amount) {
   await loadOtps([b.id]);
-  if (!PaySecret[b.id]) return showToast(t('offlineBanner')); // never fetched on this phone yet
+  if (!PaySecret[b.id]) return showToast(t(navigator.onLine ? 'saveError' : 'offlineBanner')); // not on this phone yet
   const code = await payCode(PaySecret[b.id], amount, b.id);
   const payload = JSON.stringify({ wb: 1, b: b.id, a: amount, c: code });
   let svg = '';
