@@ -394,7 +394,7 @@ async function placesFromCache(kind, at, query, toPlace, waitMs) {
       const p = e.lat != null ? { lat: e.lat, lng: e.lon } : (e.center ? { lat: e.center.lat, lng: e.center.lon } : null);
       return p && toPlace(e.tags || {}, p);
     }).filter(Boolean).slice(0, 100);
-    if (list.length) db.from('places_cache').upsert({ cell, list }).then(() => {});
+    if (list.length) db.rpc('save_places', { p_cell: cell, p_list: list }).then(() => {}); // the database checks every place
     return list;
   } catch (e) {
     /* both busy or too slow: fall back to an older saved answer */
