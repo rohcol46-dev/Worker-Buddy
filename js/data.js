@@ -42,9 +42,9 @@ function dayFromToday(days) {
 
 // ---------- Work types ----------
 // Legal floor for an 8-hour day: Tamil Nadu minimum wage, "construction or maintenance of roads and
-// buildings", 1 Apr 2026 to 31 Mar 2027, ₹609.30 (basic ₹117 + VDA ₹492.30), rounded up. No per-trade
-// figure could be confirmed, so it is the floor for every kind of work. Check it against the Labour
-// Department's G.O.; the same number is in the min_wages table (supabase/016_private_data_and_fair_pay.sql).
+// buildings": ₹606.60 to Mar 2026, VDA from 1 Apr 2026 per notification Z3/3459/2026 (₹609.30 reported),
+// rounded up. No per-trade figure could be confirmed, so it is the floor for every kind of work. The same
+// number is in the min_wages table (supabase/016_private_data_and_fair_pay.sql): change both together.
 const MIN_WAGE_DAY = 610;
 
 // Base daily wage range in ₹ for 8 hours. ESTIMATES, never below MIN_WAGE_DAY.

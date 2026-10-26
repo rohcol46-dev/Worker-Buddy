@@ -192,10 +192,11 @@ grant execute on function public.get_my_worker(text), public.get_my_employer(tex
 grant execute on function public.review_tags(text, uuid), public.wage_map_rows(), public.dispute_evidence(uuid) to anon, authenticated;
 
 -- ---------- 3. Pay: the legal minimum wage is the floor, overtime is double ----------
--- Tamil Nadu minimum wage, "construction or maintenance of roads and buildings", 1 Apr 2026 to
--- 31 Mar 2027: ₹609.30 a day (basic ₹117 + VDA ₹492.30, as listed by WageIndicator), rounded up
--- to ₹610. No per-trade figure could be confirmed, so every kind of work uses this floor.
--- Check it against the Labour Department's G.O. and update the rows here (and MIN_WAGE_DAY in js/data.js).
+-- Tamil Nadu minimum wage, "construction or maintenance of roads and buildings": ₹606.60 a day
+-- (basic ₹117 + VDA ₹489.60) up to 31 Mar 2026, per WageIndicator. The VDA from 1 Apr 2026 is set by
+-- notification Z3/3459/2026 (18 Feb 2026), whose rupee amounts aren't published online; ₹609.30 was
+-- reported for it. ₹610 is above both. No per-trade figure could be confirmed, so every kind of work
+-- uses this floor. When the rate changes, update the rows here and MIN_WAGE_DAY in js/data.js.
 create table public.min_wages (
   type text primary key check (type in ('coolie','helper','plumber','electrician','mason','painter')),
   day_rate int not null check (day_rate > 0),
@@ -205,7 +206,7 @@ create table public.min_wages (
 alter table public.min_wages enable row level security;
 create policy "read minimum wages" on public.min_wages for select to anon, authenticated using (true);
 insert into public.min_wages (type, day_rate, source, effective_from)
-  select k, 610, 'TN minimum wage, construction or maintenance of roads and buildings: ₹609.30/day from 1 Apr 2026, rounded up', date '2026-04-01'
+  select k, 610, 'TN minimum wage, construction or maintenance of roads and buildings (₹606.60/day to Mar 2026; VDA from 1 Apr 2026 per Z3/3459/2026), rounded up', date '2026-04-01'
     from unnest(array['coolie','helper','plumber','electrician','mason','painter']) k;
 
 -- The lowest legal wage for a job: short jobs by the hour (at least half a day),
