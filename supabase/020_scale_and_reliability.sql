@@ -50,10 +50,14 @@ end $$;
 -- ---------- 2. "Online" times out ----------
 alter table public.workers add column last_seen_at timestamptz not null default now();
 
--- Going online (or moving) counts as a sign of life
+-- Going online (or moving) counts as a sign of life. Only worker_seen and this trigger set
+-- last_seen_at, so a phone can't set it far ahead and stay "online" for ever.
 create function public.touch_worker_seen() returns trigger
 language plpgsql set search_path = '' as $$
 begin
+  if current_setting('wb.internal', true) is distinct from 'on' then
+    new.last_seen_at := old.last_seen_at;
+  end if;
   if new.online and (not old.online or new.lat is distinct from old.lat or new.lng is distinct from old.lng) then
     new.last_seen_at := now();
   end if;
@@ -67,7 +71,9 @@ create function public.worker_seen(p_worker uuid) returns boolean
 language plpgsql security definer set search_path = '' as $$
 begin
   perform public.assert_mine(p_worker, null);
+  perform set_config('wb.internal', 'on', true);
   update public.workers set last_seen_at = now() where id = p_worker and online;
+  perform set_config('wb.internal', 'off', true);
   return found;
 end $$;
 revoke all on function public.worker_seen(uuid) from public, anon;
@@ -77,8 +83,11 @@ create function public.offline_quiet_workers() returns int
 language plpgsql security definer set search_path = '' as $$
 declare n int;
 begin
-  update public.workers set online = false
-   where online and last_seen_at < now() - interval '30 minutes';
+  -- A worker on a job is left alone: the phone is often locked while they work
+  update public.workers w set online = false
+   where online and last_seen_at < now() - interval '30 minutes'
+     and not exists (select 1 from public.bookings b
+                      where b.worker_id = w.id and b.status in ('assigned', 'started'));
   get diagnostics n = row_count;
   return n;
 end $$;
@@ -101,7 +110,9 @@ create or replace view public.workers_public with (security_barrier) as
                       where b.worker_id = workers.id and e.auth_id = auth.uid()));
 
 -- ---------- 4. Area search for the employer map ----------
-create index workers_online_area_idx on public.workers (lat, lng) where online;
+-- On the same rounded values workers_public shows, so the employer's area filter can use it
+create index workers_online_area_idx on public.workers
+  ((round(lat::numeric, 2)::double precision), (round(lng::numeric, 2)::double precision)) where online;
 
 -- ---------- 5. Script errors from phones ----------
 create table public.client_errors (
@@ -130,16 +141,20 @@ begin
   end if;
   insert into public.client_errors (auth_id, page, message, stack, agent)
   values (auth.uid(), left(p_page, 100), left(p_message, 300), left(p_stack, 2000), left(p_agent, 300));
-  -- keep 30 days
-  delete from public.client_errors where at < now() - interval '30 days';
   return true;
 end $$;
 revoke all on function public.log_client_error(text, text, text, text) from public;
 grant execute on function public.log_client_error(text, text, text, text) to anon, authenticated;
 
+-- Keep 30 days
+select cron.schedule('worker-buddy-old-errors', '17 3 * * *',
+  $$delete from public.client_errors where at < now() - interval '30 days'$$);
+
 -- ---------- 6. Weekly numbers ----------
 -- Weeks start on Monday, UTC. "Confirmed paid" = the worker confirmed the money arrived.
 -- "Repeat hires" = paid jobs where the same employer had paid the same worker before.
+create index bookings_pair_idx on public.bookings (employer_id, worker_id, created_at)
+  where worker_confirmed_at is not null;
 create view public.admin_weekly_metrics with (security_invoker = true) as
   with b as (
     select *, date_trunc('week', created_at at time zone 'UTC')::date as week,

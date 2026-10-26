@@ -53,9 +53,21 @@ do $$ begin
   assert (select status from public.bookings where id = '30000000-0000-0000-0000-000000000002') = 'assigned', 'taken job untouched';
 end $$;
 
--- "Online" times out after 30 minutes with no sign; worker_seen keeps a worker online
+-- A phone can't set its own last_seen_at
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f8', false);
+update public.workers set last_seen_at = now() + interval '10 years' where id = '20000000-0000-0000-0000-0000000000f8';
+reset role;
+do $$ begin
+  assert (select last_seen_at < now() + interval '1 minute' from public.workers where id = '20000000-0000-0000-0000-0000000000f8'),
+    'client cannot push last_seen_at ahead';
+end $$;
+
+-- "Online" times out after 30 minutes with no sign, except for a worker on a job (f9 took job 2)
+select set_config('wb.internal', 'on', false);
 update public.workers set last_seen_at = now() - interval '40 minutes'
  where id in ('20000000-0000-0000-0000-0000000000f9', '20000000-0000-0000-0000-0000000000f8');
+select set_config('wb.internal', 'off', false);
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f9', false);
 select pg_temp.expect_error($$select public.worker_seen('20000000-0000-0000-0000-0000000000f8')$$, 'not_yours');
@@ -65,7 +77,7 @@ end $$;
 reset role;
 do $$ begin
   assert public.offline_quiet_workers() >= 1, 'quiet worker set offline';
-  assert (select online from public.workers where id = '20000000-0000-0000-0000-0000000000f9'), 'worker with a heartbeat stays online';
+  assert (select online from public.workers where id = '20000000-0000-0000-0000-0000000000f9'), 'worker on a job stays online';
   assert not (select online from public.workers where id = '20000000-0000-0000-0000-0000000000f8'), 'quiet worker offline';
 end $$;
 
