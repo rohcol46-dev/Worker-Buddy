@@ -3,17 +3,16 @@
 //   7. Rain-off pay   8. Tool charge   9. Materials list   10. Meal / water tags   26. Pay slip by SMS
 // Load after deck.js. Owner: Member 2
 
-const SHOWUP_PAY = 100;
-const TOOLS_EXTRA = 50;
 const TOOL_LIST = ['drill', 'ladder', 'toolkit', 'sprayer', 'mixer', 'wrench'];
 const TOOL_ICONS = { drill: '🪛', ladder: '🪜', toolkit: '🧰', sprayer: '🎨', mixer: '🌀', wrench: '🔧' };
 const PERKS = ['meal', 'water', 'shade', 'toilet'];
 const PERK_ICONS = { meal: '🍛', water: '💧', shade: '⛱️', toilet: '🚻' };
 
-// ---------- 6. Travel allowance (same rule as the database) ----------
+// ---------- 6. Travel allowance (same rule as travel_pay_for in supabase/031) ----------
 function travelPayFor(km) {
-  if (km === null || km <= 5) return 0;
-  return Math.min(150, 50 + 10 * Math.floor(km - 5));
+  const free = payRule('travel_free_km');
+  if (km === null || km <= free) return 0;
+  return Math.min(payRule('travel_max'), payRule('travel_base') + payRule('travel_per_km') * Math.floor(km - free));
 }
 
 // ---------- 10. Meal / water / shade / toilet provided ----------
@@ -99,11 +98,9 @@ async function decideMaterial(id, ok) {
 
 // ---------- Work harder than described ----------
 // The worker says what the work really is; the extra uses the same rules as the wage engine
-// (medium +₹50, heavy +₹100, risky +₹100). The employer accepts or refuses; pay waits for the answer.
-const LOAD_EXTRA = { light: 0, medium: 50, heavy: 100 };
-
+// (in India medium +₹50, heavy +₹100, risky +₹100). The employer accepts or refuses; pay waits for the answer.
 function effortExtraFor(b, load, risky) {
-  return Math.max(0, LOAD_EXTRA[load] - LOAD_EXTRA[b.load]) + (risky && !b.risky ? 100 : 0);
+  return Math.max(0, loadExtraFor(load, b.country) - loadExtraFor(b.load, b.country)) + (risky && !b.risky ? payRule('risky', b.country) : 0);
 }
 
 function effortClaimText(b) {
@@ -128,7 +125,7 @@ function effortHTML(me, b) {
   if (b.effort_status === 'accepted') return `<p class="effort effort-ok">✅ ${tf('effortAccepted', b.effort_extra)}</p>`;
   if (b.effort_status === 'refused') return `<p class="effort effort-no">❌ ${tf('effortRefused', b.effort_extra)}</p>`;
   if (me !== 'worker' || b.status === 'paid') return '';
-  const loads = ['medium', 'heavy'].filter((l) => LOAD_EXTRA[l] > LOAD_EXTRA[b.load]);
+  const loads = ['medium', 'heavy'].filter((l) => loadExtraFor(l, b.country) > loadExtraFor(b.load, b.country));
   if (!loads.length && b.risky) return '';
   return `<details class="effort"><summary>😓 ${t('effortClaimBtn')}</summary>
     <form onsubmit="claimEffort(event)">
@@ -273,8 +270,8 @@ Object.assign(T.en, {
   showupPaid: (n) => `✅ Show-up pay ${money(n)} paid`,
   payShowup: (n) => `Pay ${money(n)} show-up pay`,
   showupBlock: 'Please pay the show-up pay you owe before posting a new job.',
-  cancelAssignedWarn: 'The worker has already set off. Cancelling now means ₹100 show-up pay for them. Cancel?',
-  showupForWorker: 'The employer cancelled after you set off. You are owed ₹100 show-up pay.',
+  cancelAssignedWarn: () => `The worker has already set off. Cancelling now means ${money(payRule('showup'))} show-up pay for them. Cancel?`,
+  showupForWorker: (n) => `The employer cancelled after you set off. You are owed ${money(n)} show-up pay.`,
   showupLabel: 'Show-up pay',
   qrPayBtn: '🧾 Show pay-proof QR (after paying, works offline)',
   qrPayTitle: 'Show this to the worker',
@@ -290,15 +287,19 @@ Object.assign(T.en, {
   qrOk: (n) => `✅ ${money(n)} received, proven by QR. Pay slip created.`,
   qrSavedOffline: 'Saved. The pay slip will be confirmed when the internet is back.',
   travelPay: 'Travel allowance',
-  travelNote: 'Workers coming from more than 5 km get a travel allowance (₹50, +₹10 per km, up to ₹150).',
+  travelNote: () => `Workers coming from more than ${payRule('travel_free_km')} km get a travel allowance (${money(payRule('travel_base'))}, +${money(payRule('travel_per_km'))} per km, up to ${money(payRule('travel_max'))}).`,
   travelTag: (n) => `🚌 +${money(n)} travel`,
   rainStop: '🌧️ Rain stopped the work',
-  rainConfirm: 'Stop work because of rain? The worker is paid for the time worked, at least half the wage.',
-  rainNote: (n) => `🌧️ Rain-off: paid for time worked, at least half the wage (${money(n)})`,
+  rainConfirm: () => (payRule('short_min') === 0.5
+    ? 'Stop work because of rain? The worker is paid for the time worked, at least half the wage.'
+    : `Stop work because of rain? The worker is paid for the time worked, at least ${pct('short_min')} of the wage.`),
+  rainNote: (n) => (payRule('short_min') === 0.5
+    ? `🌧️ Rain-off: paid for time worked, at least half the wage (${money(n)})`
+    : `🌧️ Rain-off: paid for time worked, at least ${pct('short_min')} of the wage (${money(n)})`),
   rainLabel: 'Rain-off pay',
-  bringTools: '🧰 Worker brings own tools (+₹50)',
+  bringTools: () => `🧰 Worker brings own tools (+${money(payRule('tools'))})`,
   toolsExtra: 'Own tools',
-  toolsTag: '🧰 Bring your tools +₹50',
+  toolsTag: () => `🧰 Bring your tools +${money(payRule('tools'))}`,
   myTools: 'Tools I have',
   tool_drill: 'Drill', tool_ladder: 'Ladder', tool_toolkit: 'Tool kit', tool_sprayer: 'Paint sprayer', tool_mixer: 'Cement mixer', tool_wrench: 'Pipe wrench',
   perksTitle: 'Provided at the site',
@@ -317,8 +318,8 @@ Object.assign(T.ta, {
   showupPaid: (n) => `✅ வருகைக் கூலி ${money(n)} கொடுக்கப்பட்டது`,
   payShowup: (n) => `${money(n)} வருகைக் கூலி கொடு`,
   showupBlock: 'புதிய வேலை பதிவிடும் முன் நீங்கள் தர வேண்டிய வருகைக் கூலியைக் கொடுங்கள்.',
-  cancelAssignedWarn: 'வேலையாள் ஏற்கனவே கிளம்பிவிட்டார். இப்போது ரத்து செய்தால் அவருக்கு ₹100 வருகைக் கூலி. ரத்து செய்யவா?',
-  showupForWorker: 'நீங்கள் கிளம்பிய பிறகு முதலாளி ரத்து செய்தார். உங்களுக்கு ₹100 வருகைக் கூலி வர வேண்டும்.',
+  cancelAssignedWarn: () => `வேலையாள் ஏற்கனவே கிளம்பிவிட்டார். இப்போது ரத்து செய்தால் அவருக்கு ${money(payRule('showup'))} வருகைக் கூலி. ரத்து செய்யவா?`,
+  showupForWorker: (n) => `நீங்கள் கிளம்பிய பிறகு முதலாளி ரத்து செய்தார். உங்களுக்கு ${money(n)} வருகைக் கூலி வர வேண்டும்.`,
   showupLabel: 'வருகைக் கூலி',
   qrPayBtn: '🧾 கட்டணச் சான்று QR காட்டு (செலுத்திய பின், இணையம் இல்லாமலும்)',
   qrPayTitle: 'இதை வேலையாளிடம் காட்டுங்கள்',
@@ -334,15 +335,19 @@ Object.assign(T.ta, {
   qrOk: (n) => `✅ ${money(n)} கிடைத்தது, QR மூலம் உறுதி. சம்பளச் சீட்டு உருவானது.`,
   qrSavedOffline: 'சேமிக்கப்பட்டது. இணையம் வந்ததும் சம்பளச் சீட்டு உறுதியாகும்.',
   travelPay: 'பயணப் படி',
-  travelNote: '5 கி.மீக்கு மேல் தூரத்திலிருந்து வரும் வேலையாட்களுக்கு பயணப் படி (₹50, ஒவ்வொரு கி.மீக்கும் +₹10, அதிகபட்சம் ₹150).',
+  travelNote: () => `${payRule('travel_free_km')} கி.மீக்கு மேல் தூரத்திலிருந்து வரும் வேலையாட்களுக்கு பயணப் படி (${money(payRule('travel_base'))}, ஒவ்வொரு கி.மீக்கும் +${money(payRule('travel_per_km'))}, அதிகபட்சம் ${money(payRule('travel_max'))}).`,
   travelTag: (n) => `🚌 +${money(n)} பயணம்`,
   rainStop: '🌧️ மழையால் வேலை நின்றது',
-  rainConfirm: 'மழையால் வேலையை நிறுத்தவா? செய்த நேரத்துக்கு, குறைந்தது பாதி கூலி வேலையாளுக்குக் கிடைக்கும்.',
-  rainNote: (n) => `🌧️ மழை நிறுத்தம்: செய்த நேரத்துக்கு, குறைந்தது பாதி கூலி (${money(n)})`,
+  rainConfirm: () => (payRule('short_min') === 0.5
+    ? 'மழையால் வேலையை நிறுத்தவா? செய்த நேரத்துக்கு, குறைந்தது பாதி கூலி வேலையாளுக்குக் கிடைக்கும்.'
+    : `மழையால் வேலையை நிறுத்தவா? செய்த நேரத்துக்கு, குறைந்தது ${pct('short_min')} கூலி வேலையாளுக்குக் கிடைக்கும்.`),
+  rainNote: (n) => (payRule('short_min') === 0.5
+    ? `🌧️ மழை நிறுத்தம்: செய்த நேரத்துக்கு, குறைந்தது பாதி கூலி (${money(n)})`
+    : `🌧️ மழை நிறுத்தம்: செய்த நேரத்துக்கு, குறைந்தது ${pct('short_min')} கூலி (${money(n)})`),
   rainLabel: 'மழை நிறுத்தக் கூலி',
-  bringTools: '🧰 வேலையாள் சொந்த கருவிகள் கொண்டு வருவார் (+₹50)',
+  bringTools: () => `🧰 வேலையாள் சொந்த கருவிகள் கொண்டு வருவார் (+${money(payRule('tools'))})`,
   toolsExtra: 'சொந்த கருவிகள்',
-  toolsTag: '🧰 உங்கள் கருவிகளைக் கொண்டு வாருங்கள் +₹50',
+  toolsTag: () => `🧰 உங்கள் கருவிகளைக் கொண்டு வாருங்கள் +${money(payRule('tools'))}`,
   myTools: 'என்னிடம் உள்ள கருவிகள்',
   tool_drill: 'டிரில்', tool_ladder: 'ஏணி', tool_toolkit: 'கருவிப் பெட்டி', tool_sprayer: 'பெயிண்ட் ஸ்பிரேயர்', tool_mixer: 'சிமெண்ட் மிக்சர்', tool_wrench: 'பைப் ரெஞ்ச்',
   perksTitle: 'இடத்தில் வழங்கப்படும்',
@@ -361,8 +366,8 @@ Object.assign(T.hi, {
   showupPaid: (n) => `✅ आने का पैसा ${money(n)} दिया गया`,
   payShowup: (n) => `${money(n)} आने का पैसा दें`,
   showupBlock: 'नया काम पोस्ट करने से पहले बाकी आने का पैसा दें।',
-  cancelAssignedWarn: 'मज़दूर निकल चुका है। अभी रद्द करने पर उसे ₹100 आने का पैसा मिलेगा। रद्द करें?',
-  showupForWorker: 'आपके निकलने के बाद मालिक ने रद्द किया। आपको ₹100 आने का पैसा मिलना है।',
+  cancelAssignedWarn: () => `मज़दूर निकल चुका है। अभी रद्द करने पर उसे ${money(payRule('showup'))} आने का पैसा मिलेगा। रद्द करें?`,
+  showupForWorker: (n) => `आपके निकलने के बाद मालिक ने रद्द किया। आपको ${money(n)} आने का पैसा मिलना है।`,
   showupLabel: 'आने का पैसा',
   qrPayBtn: '🧾 भुगतान-सबूत QR दिखाएँ (भुगतान के बाद, बिना इंटरनेट भी)',
   qrPayTitle: 'यह मज़दूर को दिखाएँ',
@@ -378,15 +383,19 @@ Object.assign(T.hi, {
   qrOk: (n) => `✅ ${money(n)} मिला, QR से पक्का। पे स्लिप बन गई।`,
   qrSavedOffline: 'सेव हो गया। इंटरनेट आने पर पे स्लिप पक्की होगी।',
   travelPay: 'आने-जाने का भत्ता',
-  travelNote: '5 किमी से ज़्यादा दूर से आने वाले मज़दूर को भत्ता (₹50, हर किमी +₹10, ज़्यादा से ज़्यादा ₹150)।',
+  travelNote: () => `${payRule('travel_free_km')} किमी से ज़्यादा दूर से आने वाले मज़दूर को भत्ता (${money(payRule('travel_base'))}, हर किमी +${money(payRule('travel_per_km'))}, ज़्यादा से ज़्यादा ${money(payRule('travel_max'))})।`,
   travelTag: (n) => `🚌 +${money(n)} भत्ता`,
   rainStop: '🌧️ बारिश से काम रुका',
-  rainConfirm: 'बारिश से काम रोकें? मज़दूर को किए गए समय का, कम से कम आधी मज़दूरी मिलेगी।',
-  rainNote: (n) => `🌧️ बारिश से रुका: किए गए समय का, कम से कम आधी मज़दूरी (${money(n)})`,
+  rainConfirm: () => (payRule('short_min') === 0.5
+    ? 'बारिश से काम रोकें? मज़दूर को किए गए समय का, कम से कम आधी मज़दूरी मिलेगी।'
+    : `बारिश से काम रोकें? मज़दूर को किए गए समय का, कम से कम ${pct('short_min')} मज़दूरी मिलेगी।`),
+  rainNote: (n) => (payRule('short_min') === 0.5
+    ? `🌧️ बारिश से रुका: किए गए समय का, कम से कम आधी मज़दूरी (${money(n)})`
+    : `🌧️ बारिश से रुका: किए गए समय का, कम से कम ${pct('short_min')} मज़दूरी (${money(n)})`),
   rainLabel: 'बारिश वाला पैसा',
-  bringTools: '🧰 मज़दूर अपने औज़ार लाएगा (+₹50)',
+  bringTools: () => `🧰 मज़दूर अपने औज़ार लाएगा (+${money(payRule('tools'))})`,
   toolsExtra: 'अपने औज़ार',
-  toolsTag: '🧰 अपने औज़ार लाएँ +₹50',
+  toolsTag: () => `🧰 अपने औज़ार लाएँ +${money(payRule('tools'))}`,
   myTools: 'मेरे पास के औज़ार',
   tool_drill: 'ड्रिल', tool_ladder: 'सीढ़ी', tool_toolkit: 'औज़ार किट', tool_sprayer: 'पेंट स्प्रेयर', tool_mixer: 'सीमेंट मिक्सर', tool_wrench: 'पाइप रिंच',
   perksTitle: 'जगह पर मिलेगा',
@@ -402,7 +411,7 @@ Object.assign(T.hi, {
 
 // Night pay and "work harder than described"
 Object.assign(T.en, {
-  nightExtra: 'Night pay (+20%)',
+  nightExtra: () => `Night pay (+${pct('night')})`,
   effortTitle: 'Work is harder than described',
   effortClaimBtn: 'Work is harder than described?',
   effortPosted: (load, risky) => `Posted as: ${load}${risky ? ' · ' + risky : ''}. What is it really?`,
@@ -421,7 +430,7 @@ Object.assign(T.en, {
   effortRefusedCount: (n) => `😓 Refused harder-work pay ${n}×`
 });
 Object.assign(T.ta, {
-  nightExtra: 'இரவு கூலி (+20%)',
+  nightExtra: () => `இரவு கூலி (+${pct('night')})`,
   effortTitle: 'சொன்னதை விட வேலை கடினம்',
   effortClaimBtn: 'சொன்னதை விட வேலை கடினமா?',
   effortPosted: (load, risky) => `பதிவு: ${load}${risky ? ' · ' + risky : ''}. உண்மையில் எப்படி?`,
@@ -440,7 +449,7 @@ Object.assign(T.ta, {
   effortRefusedCount: (n) => `😓 கடின வேலை கூலி ${n} முறை மறுப்பு`
 });
 Object.assign(T.hi, {
-  nightExtra: 'रात का भत्ता (+20%)',
+  nightExtra: () => `रात का भत्ता (+${pct('night')})`,
   effortTitle: 'काम बताए से ज़्यादा कठिन है',
   effortClaimBtn: 'काम बताए से ज़्यादा कठिन है?',
   effortPosted: (load, risky) => `बताया गया: ${load}${risky ? ' · ' + risky : ''}। असल में कैसा है?`,
@@ -458,9 +467,9 @@ Object.assign(T.hi, {
   effortPayFirst: 'पहले मज़दूर की कठिन काम वाली माँग का जवाब दें',
   effortRefusedCount: (n) => `😓 कठिन काम का पैसा ${n} बार मना किया`
 });
-Object.assign(T.en, { ruleNight: 'Night work (8 PM – 6 AM): +20%' });
-Object.assign(T.ta, { ruleNight: 'இரவு வேலை (இரவு 8 – காலை 6): +20%' });
-Object.assign(T.hi, { ruleNight: 'रात का काम (रात 8 – सुबह 6): +20%' });
+Object.assign(T.en, { ruleNight: () => `Night work (8 PM – 6 AM): +${pct('night')}` });
+Object.assign(T.ta, { ruleNight: () => `இரவு வேலை (இரவு 8 – காலை 6): +${pct('night')}` });
+Object.assign(T.hi, { ruleNight: () => `रात का काम (रात 8 – सुबह 6): +${pct('night')}` });
 
 // ---------- Pay through the employer's own UPI app (free, no payment gateway) ----------
 // Opens GPay / PhonePe / Paytm with the worker's UPI ID and the amount filled in.
@@ -709,7 +718,7 @@ Object.assign(T.en, {
   workerClosedNote: 'The worker closed this job with no payment. Nothing is owed.',
   workerCancelBefore: 'The employer will be sent another worker.',
   workerCancelAfter: 'The job closes with no payment.',
-  empCancelShowup: 'The worker is already on the way, so ₹100 show-up pay is owed to them.',
+  empCancelShowup: () => `The worker is already on the way, so ${money(payRule('showup'))} show-up pay is owed to them.`,
   empCancelAfter: 'Work has started. Cancelling counts as an unpaid job and lowers your Fair Pay Score, and the worker can use it as proof in a complaint.',
   employerClosedUnpaid: '⚠️ The employer cancelled after the work started, without paying. It is saved as proof, and their Fair Pay Score went down. Free legal help: 15100.'
 });
@@ -740,7 +749,7 @@ Object.assign(T.ta, {
   workerClosedNote: 'வேலையாள் இந்த வேலையைப் பணம் இல்லாமல் மூடினார். எதுவும் தர வேண்டியதில்லை.',
   workerCancelBefore: 'முதலாளிக்கு வேறு வேலையாள் அனுப்பப்படுவார்.',
   workerCancelAfter: 'பணம் இல்லாமல் வேலை மூடப்படும்.',
-  empCancelShowup: 'வேலையாள் ஏற்கனவே வருகிறார், எனவே ₹100 வருகைக் கூலி தர வேண்டும்.',
+  empCancelShowup: () => `வேலையாள் ஏற்கனவே வருகிறார், எனவே ${money(payRule('showup'))} வருகைக் கூலி தர வேண்டும்.`,
   empCancelAfter: 'வேலை தொடங்கிவிட்டது. ரத்து செய்தால் செலுத்தாத வேலையாகக் கணக்கிடப்பட்டு Fair Pay மதிப்பெண் குறையும்; வேலையாள் இதைச் சான்றாகப் பயன்படுத்தலாம்.',
   employerClosedUnpaid: '⚠️ வேலை தொடங்கிய பின் முதலாளி பணம் செலுத்தாமல் ரத்து செய்தார். இது சான்றாகச் சேமிக்கப்பட்டது; அவரது Fair Pay மதிப்பெண் குறைந்தது. இலவச சட்ட உதவி: 15100.'
 });
@@ -771,7 +780,7 @@ Object.assign(T.hi, {
   workerClosedNote: 'मज़दूर ने यह काम बिना भुगतान के बंद किया। कुछ देना बाकी नहीं।',
   workerCancelBefore: 'मालिक को दूसरा मज़दूर भेजा जाएगा।',
   workerCancelAfter: 'काम बिना भुगतान के बंद होगा।',
-  empCancelShowup: 'मज़दूर पहले से रास्ते में है, इसलिए ₹100 आने का पैसा देना होगा।',
+  empCancelShowup: () => `मज़दूर पहले से रास्ते में है, इसलिए ${money(payRule('showup'))} आने का पैसा देना होगा।`,
   empCancelAfter: 'काम शुरू हो चुका है। रद्द करना बिना भुगतान वाला काम गिना जाएगा और आपका Fair Pay स्कोर घटेगा; मज़दूर इसे सबूत की तरह इस्तेमाल कर सकता है।',
   employerClosedUnpaid: '⚠️ काम शुरू होने के बाद मालिक ने बिना भुगतान के रद्द किया। यह सबूत के रूप में सहेजा गया है और उनका Fair Pay स्कोर घटा। मुफ़्त कानूनी मदद: 15100.'
 });

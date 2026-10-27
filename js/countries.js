@@ -5,13 +5,35 @@
 const COUNTRY_INDIA = {
   code: 'IN', name: 'India', live: true, currency: 'INR', calling_code: '91',
   phone_pattern: '[6-9][0-9]{9}', phone_example: '9876543210',
-  time_zone: 'Asia/Kolkata', emergency: '112', languages: ['en', 'ta', 'hi']
+  time_zone: 'Asia/Kolkata', emergency: '112', languages: ['en', 'ta', 'hi'],
+  // Same numbers as supabase/031_country_pay_rules.sql
+  wage_region: 'Tamil Nadu',
+  pay_rules: {
+    round: 10, overtime: 2, short_min: 0.5, showup: 100, tools: 50, load_medium: 50, load_heavy: 100, risky: 100,
+    travel_free_km: 5, travel_base: 50, travel_per_km: 10, travel_max: 150, night: 0.2, heat: 0.1, offer_step: 50
+  },
+  // Legal day rate and the estimated going rate for 8 hours, per trade
+  min_wages: [
+    { type: 'coolie', day_rate: 610, est_min: 610, est_max: 700 },
+    { type: 'helper', day_rate: 610, est_min: 610, est_max: 650 },
+    { type: 'plumber', day_rate: 610, est_min: 700, est_max: 1000 },
+    { type: 'electrician', day_rate: 610, est_min: 800, est_max: 1100 },
+    { type: 'mason', day_rate: 610, est_min: 750, est_max: 1000 },
+    { type: 'painter', day_rate: 610, est_min: 650, est_max: 900 }
+  ]
 };
 
 const Country = {
-  list: Object.assign({ IN: COUNTRY_INDIA }, Store.get('countries', {})),
+  list: Store.get('countries', {}),
   code: Store.get('country', 'IN')
 };
+// A pack saved by an older version has no pay rules: India's built-in ones fill the gaps
+Country.list.IN = Object.assign({}, COUNTRY_INDIA, Country.list.IN);
+
+// A pack the app can use: saved before pay rules came in, it is fetched again
+function packComplete(c) {
+  return !!(c && c.pay_rules && c.min_wages && c.min_wages.length);
+}
 
 function myCountry() {
   return Country.list[Country.code] || COUNTRY_INDIA;
@@ -22,7 +44,7 @@ function setMyCountry(code) {
   if (!code || code === Country.code) return;
   Country.code = code;
   Store.set('country', code);
-  if (!Country.list[code]) loadCountries(true);
+  if (!packComplete(Country.list[code])) loadCountries(true);
   applyPhoneInputs();
   if (typeof accountHTML === 'function') document.querySelectorAll('.account-box:not([hidden])').forEach((box) => { box.innerHTML = accountHTML(); });
 }
@@ -30,13 +52,16 @@ function setMyCountry(code) {
 // The list rarely changes: fetched when missing or a day old
 async function loadCountries(force) {
   if (typeof db === 'undefined') return;
-  if (!force && Country.list[Country.code] && Date.now() - Store.get('countries_at', 0) < 86400000) return;
-  const { data, error } = await db.from('countries').select('*');
+  const hadPack = packComplete(Country.list[Country.code]);
+  if (!force && hadPack && Date.now() - Store.get('countries_at', 0) < 86400000) return;
+  const { data, error } = await db.from('countries').select('*, min_wages(type, day_rate, est_min, est_max)');
   if (error || !data) return;
   data.forEach((c) => { Country.list[c.code] = c; });
   Store.set('countries', Country.list);
   Store.set('countries_at', Date.now());
   applyPhoneInputs();
+  // The person's pack just arrived: draw the screen again with its money and rules
+  if (!hadPack && packComplete(Country.list[Country.code]) && typeof App !== 'undefined' && App.onLang) App.onLang();
 }
 
 // Language + country for dates and numbers, e.g. ta-IN or en-KE
@@ -75,6 +100,55 @@ function money(amount, currency) {
 // The currency sign alone, for input placeholders
 function moneySign() {
   return money(0).replace(/[\d\s.,]/g, '') || myCountry().currency;
+}
+
+// ---------- Pay rules ----------
+// The amounts the app adds to a wage come from the country (supabase/031_country_pay_rules.sql)
+
+// The person's country, or a job's own country when given
+function payRule(key, country) {
+  const rules = ((country && Country.list[country]) || myCountry()).pay_rules || {};
+  return key in rules ? Number(rules[key]) : COUNTRY_INDIA.pay_rules[key];
+}
+
+// A pay rule that is a share, as a percentage: 0.2 -> "20%"
+function pct(key) {
+  return `${Math.round(payRule(key) * 100)}%`;
+}
+
+// The pack's trades, or India's while it has none
+function tradeRows() {
+  const rows = myCountry().min_wages;
+  return rows && rows.length ? rows : COUNTRY_INDIA.min_wages;
+}
+
+// { floor, min, max } for 8 hours of a trade: the legal day rate and the estimated going rate
+function tradeRange(type) {
+  const rows = tradeRows();
+  const r = rows.find((w) => w.type === type) || rows.find((w) => w.type === 'coolie') || rows[0];
+  return { floor: r.day_rate, min: Math.max(r.est_min, r.day_rate), max: Math.max(r.est_max, r.est_min, r.day_rate) };
+}
+
+// Where the minimum wage comes from, e.g. "Tamil Nadu" (given in the person's language for India)
+function wageRegion(indiaName) {
+  return myCountry().code === 'IN' ? indiaName : (myCountry().wage_region || myCountry().name);
+}
+
+// The lowest legal day rate of any trade, for "never below the minimum wage"
+function minWageDay() {
+  return Math.min(...tradeRows().map((w) => w.day_rate));
+}
+
+// Amounts are whole steps of the country's rounding (10 rupees, 1 dollar)
+function roundMoney(n) {
+  const step = payRule('round');
+  return Math.round(n / step) * step;
+}
+
+// Rounds up, so the bottom of a range never drops below the legal minimum
+function ceilMoney(n) {
+  const step = payRule('round');
+  return Math.ceil(n / step) * step;
 }
 
 // ---------- Phone numbers ----------

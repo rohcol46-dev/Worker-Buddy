@@ -6,9 +6,10 @@
 const MAX_TEAM = 5;
 
 // ---------- Counter-offers (inDrive) ----------
-// A worker may ask a little more, more, or the top of the fair range, never above it
+// A worker may ask a little more, more, or the top of the fair range, never above it (steps of ₹50 in India)
 function offerChoices(b) {
-  const list = [b.agreed_wage + 50, b.agreed_wage + 100, b.wage_max]
+  const step = payRule('offer_step', b.country);
+  const list = [b.agreed_wage + step, b.agreed_wage + 2 * step, b.wage_max]
     .filter((n) => n > b.agreed_wage && n <= b.wage_max);
   return [...new Set(list)].sort((x, y) => x - y);
 }
@@ -86,7 +87,7 @@ Object.assign(T.en, {
   hostsRest: '🤝 Hosts a rest point for workers',
   zeroCommission: '💯 0% commission: you keep everything you earn',
   commissionLabel: 'Worker Buddy commission',
-  commissionValue: '₹0 (worker keeps 100%)'
+  commissionValue: () => `${money(0)} (worker keeps 100%)`
 });
 
 Object.assign(T.ta, {
@@ -122,7 +123,7 @@ Object.assign(T.ta, {
   hostsRest: '🤝 வேலையாட்களுக்கு ஓய்வு இடம் தருகிறார்',
   zeroCommission: '💯 0% கமிஷன்: நீங்கள் சம்பாதிப்பது முழுவதும் உங்களுக்கே',
   commissionLabel: 'Worker Buddy கமிஷன்',
-  commissionValue: '₹0 (வேலையாளுக்கு 100%)'
+  commissionValue: () => `${money(0)} (வேலையாளுக்கு 100%)`
 });
 
 Object.assign(T.hi, {
@@ -158,5 +159,5 @@ Object.assign(T.hi, {
   hostsRest: '🤝 मज़दूरों को आराम की जगह देते हैं',
   zeroCommission: '💯 0% कमीशन: आपकी पूरी कमाई आपकी',
   commissionLabel: 'Worker Buddy कमीशन',
-  commissionValue: '₹0 (मज़दूर को 100%)'
+  commissionValue: () => `${money(0)} (मज़दूर को 100%)`
 });

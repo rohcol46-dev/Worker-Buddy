@@ -156,12 +156,12 @@ function withSite(b) {
   return b;
 }
 
-// Overtime per hour: twice the agreed wage per hour (Code on Wages, 2019). The database sets it on every job;
-// a finished job saved on the phone before that was paid at the old flat ₹80.
+// Overtime per hour: the job country's overtime multiple of the agreed wage per hour (twice in India, Code on
+// Wages, 2019). The database sets it on every job; a finished job saved on the phone before that was paid at the old flat ₹80.
 function otRate(b) {
   if (b.ot_rate) return b.ot_rate;
   if (b.completed_at) return 80;
-  return Math.ceil((b.agreed_wage * 2) / Math.max(b.hours || 8, 4));
+  return Math.ceil((b.agreed_wage * payRule('overtime', b.country)) / Math.max(b.hours || 8, 4));
 }
 
 // The text worker and employer share on WhatsApp as their work agreement

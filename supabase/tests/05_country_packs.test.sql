@@ -48,6 +48,13 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f2
 select pg_temp.expect_error($$insert into public.workers (device_id, name, phone, skill, birth_year, auth_id, country)
   values ('d-f2x', 'Early', '0712000002', 'mason', 1992, '00000000-0000-0000-0000-0000000000f2', 'KE')$$, 'country_not_open');
 reset role;
+-- Kenya's pay rules and minimum wages (test numbers, not real rates); 031 needs them before going live
+update public.countries set pay_rules = '{"round": 10, "overtime": 1.5, "short_min": 0.5, "showup": 200, "tools": 100,
+  "load_medium": 100, "load_heavy": 200, "risky": 200, "travel_free_km": 5, "travel_base": 100, "travel_per_km": 20,
+  "travel_max": 300, "night": 0.2, "heat": 0.1, "offer_step": 100}' where code = 'KE';
+insert into public.min_wages (country, type, day_rate, est_min, est_max, source, effective_from)
+  select 'KE', k, 400, 450, 700, 'test', date '2026-01-01'
+    from unnest(array['coolie','helper','plumber','electrician','mason','painter']) k;
 update public.countries set live = true where code = 'KE';
 insert into public.employers (id, device_id, name, phone, auth_id, country) values
   ('10000000-0000-0000-0000-0000000000f1', 'd-k1', 'Nairobi Builders', '0700000000', '00000000-0000-0000-0000-0000000000f1', 'KE');

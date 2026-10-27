@@ -6,7 +6,7 @@
 const E = {
   when: 'now',         // 'now' or 'later'
   team: 1,             // workers needed (Porter-style "add helpers")
-  tools: false,        // worker brings own tools (+₹50)
+  tools: false,        // worker brings own tools (+ the country's tools extra)
   perks: [],           // meal / water / shade / toilet provided
   crew: [],            // a team booking: one booking per worker
   crewWorkers: {},

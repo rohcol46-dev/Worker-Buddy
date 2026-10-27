@@ -218,7 +218,7 @@ function onBookingChange(payload) {
     // The employer cancelled before work started
     const why = b.cancelled_by === 'employer' && b.cancel_note ? `\n${cancelLine(b)}` : '';
     showToast((b.cancel_reason === 'employer_unpaid' ? t('employerClosedUnpaid')
-      : b.showup_pay ? t('showupForWorker') : `${statusLabel('cancelled')}: ${t(b.type)}, ${b.area}`) + why);
+      : b.showup_pay ? tf('showupForWorker', b.showup_pay) : `${statusLabel('cancelled')}: ${t(b.type)}, ${b.area}`) + why);
     W.active = null;
     W.employer = null;
     cacheState();
