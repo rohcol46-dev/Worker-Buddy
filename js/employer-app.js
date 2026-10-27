@@ -6,7 +6,7 @@
 const E = {
   when: 'now',         // 'now' or 'later'
   team: 1,             // workers needed (Porter-style "add helpers")
-  tools: false,        // worker brings own tools (+₹50)
+  tools: false,        // worker brings own tools (+ the country's tools extra)
   perks: [],           // meal / water / shade / toilet provided
   crew: [],            // a team booking: one booking per worker
   crewWorkers: {},
@@ -35,15 +35,16 @@ const E = {
 // ---------- Profile ----------
 async function loadMe() {
   E.me = await myProfile('employer');
+  if (E.me) setMyCountry(E.me.country);
 }
 
 async function saveProfile(event) {
   event.preventDefault();
   const f = event.target;
-  const row = { name: f.name.value.trim(), phone: f.phone.value.replace(/\D/g, ''), device_id: deviceId() };
-  if (!/^[6-9]\d{9}$/.test(row.phone)) return showToast(t('badPhone'));
+  const row = { name: f.name.value.trim(), phone: phoneIntl(f.phone.value), country: myCountry().code, device_id: deviceId() };
+  if (!row.phone) return showToast(t('badPhone'));
   const { error } = await db.from('employers').insert(row);
-  if (error) return showToast(t('saveError'));
+  if (error) return trustError(error) || showToast(t('saveError'));
   await loadMe();
   Store.set('e_me', E.me);
   renderAccount();
@@ -232,7 +233,7 @@ function renderEstimate() {
   const items = (GEAR[E.type] || []).map((key) => `✔ ${t(key)}`).join(' · ');
   document.getElementById('gearBox').innerHTML = items ? `<b>🦺 ${t('gearTitle')}</b>${items}` : '';
   document.getElementById('bookBtn').textContent = E.team > 1 ? tf('bookTeam', E.team, agreedWage(job) * E.team)
-    : E.preferred ? `${tf('requestThis', E.preferred.name)} · ₹${agreedWage(job)}` : tf('bookNow', agreedWage(job));
+    : E.preferred ? `${tf('requestThis', E.preferred.name)} · ${money(agreedWage(job))}` : tf('bookNow', agreedWage(job));
 }
 
 // ---------- The exact work site ----------
@@ -515,7 +516,7 @@ function renderBooking() {
         <p class="muted">${b.preferred_worker_id ? `🎯 ${tf('requestingOnly', esc(preferred ? preferred.name : t('worker')))}` : tf('requestSentTo', onlineOfType())}</p>
         ${b.scheduled_for ? `<p><b>${tf('scheduledFor', whenText(b))}</b><br><span class="muted small">${t('waitingAccept')}</span></p>`
           : '<div class="big-timer"><b id="searchClock">10:00</b></div>'}
-        <p class="small">📍 ${esc(b.area)} · ⏱️ ${b.hours} ${t('hoursUnit')} · <b>₹${b.agreed_wage}</b></p>
+        <p class="small">📍 ${esc(b.area)} · ⏱️ ${b.hours} ${t('hoursUnit')} · <b>${money(b.agreed_wage, b.currency)}</b></p>
         <p class="paid-ok small">${t('jobPosted')}</p>
         ${reservedFor(b) ? `<p class="small">${t('favReserved')}</p>` : ''}
         <button class="btn btn-whatsapp btn-block btn-big" onclick="shareJob(E.booking, E.me.name)">${t('shareJobWa')}</button>
@@ -567,24 +568,24 @@ function renderBooking() {
   } else if (b.status === 'completed') {
     action = `
       <div class="agreement">
-        <div><span>${t('agreedWage')}</span><span>₹${b.agreed_wage}</span></div>
-        ${b.overtime_hours ? `<div><span>${t('overtimeLabel')} (${b.overtime_hours} h)</span><span>+₹${otRate(b) * b.overtime_hours}</span></div>` : ''}
+        <div><span>${t('agreedWage')}</span><span>${money(b.agreed_wage, b.currency)}</span></div>
+        ${b.overtime_hours ? `<div><span>${t('overtimeLabel')} (${b.overtime_hours} h)</span><span>+${money(otRate(b) * b.overtime_hours, b.currency)}</span></div>` : ''}
         <div><span>${t('workedTime')}</span><span>${fmtDuration(workedMinutes(b))}</span></div>
-        ${b.travel_pay ? `<div><span>${t('travelPay')}</span><span>+₹${b.travel_pay}</span></div>` : ''}
+        ${b.travel_pay ? `<div><span>${t('travelPay')}</span><span>+${money(b.travel_pay, b.currency)}</span></div>` : ''}
         ${b.rain_off ? `<div><span>${t('rainLabel')}</span><span>🌧️</span></div>` : ''}
-        ${approvedMaterials() ? `<div><span>${t('materialsLabel')}</span><span>+₹${approvedMaterials()}</span></div>` : ''}
-        ${E.tip ? `<div><span>${t('tipLabel')}</span><span>+₹${E.tip}</span></div>` : ''}
-        <div><span><b>${t('totalPaid')}</b></span><span><b>₹${amount + E.tip + approvedMaterials()}</b></span></div>
+        ${approvedMaterials() ? `<div><span>${t('materialsLabel')}</span><span>+${money(approvedMaterials())}</span></div>` : ''}
+        ${E.tip ? `<div><span>${t('tipLabel')}</span><span>+${money(E.tip)}</span></div>` : ''}
+        <div><span><b>${t('totalPaid')}</b></span><span><b>${money(amount + E.tip + approvedMaterials())}</b></span></div>
       </div>
       <div class="tip-box"><b>🙏 ${t('addTip')}</b>
-        <div class="chips">${TIPS.map((n) => `<button type="button" class="chip ${E.tip === n ? 'active' : ''}" onclick="setTip(${n})">${n ? '₹' + n : t('noTip')}</button>`).join('')}</div>
+        <div class="chips">${TIPS.map((n) => `<button type="button" class="chip ${E.tip === n ? 'active' : ''}" onclick="setTip(${n})">${n ? money(n) : t('noTip')}</button>`).join('')}</div>
       </div>
       ${b.effort_status === 'pending' ? `<p class="dispute-note">${t('effortPayFirst')}</p>` : `
       ${upiPayHTML(b, E.worker, amount + E.tip + approvedMaterials())}
       <button class="btn btn-accept btn-block btn-big" onclick="payWorker()">${tf('payNow', amount + E.tip + approvedMaterials())}</button>`}
       <button class="link-btn small close-unpaid" onclick="employerCancel()">${t('cancelJobBtn')}</button>`;
   } else if (b.status === 'paid' && b.worker_confirmed_at) {
-    action = `<p class="paid-ok">✅ ${t('slipConfirmed')}${b.tip ? ` · 🙏 ${t('tipLabel')} ₹${b.tip}` : ''}</p>
+    action = `<p class="paid-ok">✅ ${t('slipConfirmed')}${b.tip ? ` · 🙏 ${t('tipLabel')} ${money(b.tip, b.currency)}` : ''}</p>
       <button class="btn btn-dark btn-block" onclick="openSlip(E.booking, E.me, E.worker)">${t('viewSlip')}</button>`;
   } else if (b.status === 'paid' && b.disputed) {
     action = `<p class="dispute-note">⚠️ ${t('workerDisputed')}</p>`;
@@ -603,12 +604,12 @@ function renderBooking() {
       <div class="person">
         <div class="avatar">${esc((w.name || '?').slice(0, 1).toUpperCase())}</div>
         <div><b>${esc(w.name)}</b> ${trustedBadge(w)}<div class="muted small">${WORK_TYPES[b.type].icon} ${t(b.type)} · ${workerStars(w)} · ${tf('jobsCount', w.jobs_done || 0)}</div>${skillBadgesHTML(E.worker)}</div>
-        ${w.phone ? `<a class="icon-btn" href="tel:${w.phone}" aria-label="${t('call')}">📞</a>
-        <a class="icon-btn wa" target="_blank" rel="noopener" href="https://wa.me/91${w.phone}" aria-label="${t('whatsapp')}">💬</a>` : ''}
+        ${w.phone ? `<a class="icon-btn" href="${attr(telHref(w.phone))}" aria-label="${t('call')}">📞</a>
+        <a class="icon-btn wa" target="_blank" rel="noopener" href="${attr(waHref(w.phone))}" aria-label="${t('whatsapp')}">💬</a>` : ''}
       </div>
       <div class="request-main">
         <div><b>${t(b.type)}</b><p class="muted">📍 ${esc(b.area)} · ⏱️ ${b.hours} ${t('hoursUnit')}</p></div>
-        <div class="pay-chip">₹${amount}</div>
+        <div class="pay-chip">${money(amount)}</div>
       </div>
       ${effortHTML('employer', b)}
       ${action}
@@ -742,11 +743,11 @@ function crewSlotHTML(b, i) {
         : b.disputed ? `<span class="badge badge-disputed">⚠️ ${t('statusDisputed')}</span>`
           : `<span class="badge badge-accepted">${t('awaitingConfirm')}</span>`;
     }
-    if (b.effort_status === 'pending') action += ` <span class="badge badge-accepted">😓 +₹${b.effort_extra}</span>`;
+    if (b.effort_status === 'pending') action += ` <span class="badge badge-accepted">😓 +${money(b.effort_extra, b.currency)}</span>`;
     const chat = ['assigned', 'started', 'completed'].includes(b.status)
       ? `<button class="icon-btn" onclick="openCrewChat('${b.id}')" aria-label="${attr(t('quickMessages'))}">💬</button>` : '';
     body = `<div class="crew-main"><b>${esc(w ? w.name : '…')}</b> <small>${w ? workerStars(w) : ''}</small><br>${action}</div>
-      ${chat}${w && w.phone ? `<a class="icon-btn" href="tel:${w.phone}" aria-label="${t('call')}">📞</a>` : ''}`;
+      ${chat}${w && w.phone ? `<a class="icon-btn" href="${attr(telHref(w.phone))}" aria-label="${t('call')}">📞</a>` : ''}`;
   }
   return `<div class="crew-slot"><span class="crew-num">${i + 1}</span>${body}</div>`;
 }
@@ -765,7 +766,7 @@ function renderCrew() {
       <p class="muted">📍 ${esc(withSite(first).area)} · ⏱️ ${first.hours} ${t('hoursUnit')} · ${tf('teamFilled', filled, crew.length)}</p>
       ${searching.length && !first.scheduled_for ? `<div class="big-timer"><small>${t('slotFinding')}</small><b id="searchClock">10:00</b></div>` : ''}
       <div class="crew">${crew.map(crewSlotHTML).join('')}</div>
-      <div class="agreement"><div><span><b>${t('teamTotal')}</b></span><span><b>₹${total}</b></span></div></div>
+      <div class="agreement"><div><span><b>${t('teamTotal')}</b></span><span><b>${money(total)}</b></span></div></div>
       ${searching.length ? `<button class="btn btn-whatsapp btn-block" onclick="shareJob(E.crew.find((x) => x.status === 'searching'), E.me.name)">${t('shareJobWa')}</button>
         <button class="btn btn-light btn-block" onclick="stopCrewSearch()">${t('cancelUnfilled')}</button>` : ''}
       ${crewDone() ? `<button class="btn btn-primary btn-block btn-big" onclick="newBooking()">${t('bookAgain')}</button>` : ''}
@@ -852,12 +853,12 @@ function drawCrewPay() {
     <h3>${esc(w.name || '')}</h3>
     ${effortHTML('employer', b)}
     <div class="agreement">
-      <div><span>${t('agreedWage')}</span><span>₹${amountOf(b)}</span></div>
-      ${tip ? `<div><span>${t('tipLabel')}</span><span>+₹${tip}</span></div>` : ''}
-      <div><span><b>${t('totalPaid')}</b></span><span><b>₹${total}</b></span></div>
+      <div><span>${t('agreedWage')}</span><span>${money(amountOf(b), b.currency)}</span></div>
+      ${tip ? `<div><span>${t('tipLabel')}</span><span>+${money(tip)}</span></div>` : ''}
+      <div><span><b>${t('totalPaid')}</b></span><span><b>${money(total)}</b></span></div>
     </div>
     <div class="tip-box"><b>🙏 ${t('addTip')}</b>
-      <div class="chips">${TIPS.map((n) => `<button type="button" class="chip ${tip === n ? 'active' : ''}" onclick="E.crewPay.tip = ${n}; drawCrewPay()">${n ? '₹' + n : t('noTip')}</button>`).join('')}</div>
+      <div class="chips">${TIPS.map((n) => `<button type="button" class="chip ${tip === n ? 'active' : ''}" onclick="E.crewPay.tip = ${n}; drawCrewPay()">${n ? money(n) : t('noTip')}</button>`).join('')}</div>
     </div>
     ${b.effort_status === 'pending' ? `<p class="dispute-note">${t('effortPayFirst')}</p>` : `
     ${upiPayHTML(b, w, total)}
@@ -1080,7 +1081,7 @@ async function renderBookings() {
         ${b.rating_by_employer ? `<span class="stars-small">${'★'.repeat(b.rating_by_employer)}</span>` : ''}
       </div>
       <div class="actions">
-        <b class="pay-chip">₹${amountOf(b)}</b>
+        <b class="pay-chip">${money(amountOf(b), b.currency)}</b>
         ${b.worker_confirmed_at ? `<button class="btn btn-light btn-small" onclick="openRecordSlip(${i})">🧾</button>` : ''}
         ${b.worker && b.status === 'paid' && !b.rating_by_employer ? `<button class="btn btn-primary btn-small" onclick="rateRecord(${i})">⭐ ${t('rateWorkerShort')}</button>` : ''}
         ${b.worker && b.status === 'paid' ? `<button class="btn btn-light btn-small" onclick="bookAgain(${i})">${t('bookAgainWorker')}</button>` : ''}
@@ -1281,7 +1282,7 @@ async function startApp() {
   await loadOpenBooking();
   syncForm();
   listenMaterials((row, kind) => {
-    if (kind === 'INSERT') { showToast(`🧾 ${row.item} · ₹${row.amount}`); ring(); }
+    if (kind === 'INSERT') { showToast(`🧾 ${row.item} · ${money(row.amount)}`); ring(); }
     renderBooking();
   });
   renderBooking();

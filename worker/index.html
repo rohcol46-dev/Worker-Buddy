@@ -33,7 +33,7 @@
       <div class="hero"><h1 data-t="onboardWorkerTitle"></h1><p data-t="onboardHint"></p></div>
       <form id="onboardForm" class="card form" autocomplete="on">
         <label><span data-t="yourName"></span><input name="name" required maxlength="60" data-t-ph="workerNamePh" autocomplete="name"></label>
-        <label><span data-t="phone"></span><input name="phone" type="tel" inputmode="numeric" pattern="[6-9][0-9]{9}" maxlength="10" required placeholder="9876543210" autocomplete="tel-national"></label>
+        <label><span data-t="phone"></span><input name="phone" type="tel" inputmode="tel" data-phone maxlength="20" required placeholder="9876543210" autocomplete="tel-national"></label>
         <label><span data-t="birthYear"></span><input name="birth" type="number" inputmode="numeric" min="1940" max="2100" required placeholder="1995"></label>
         <label><span data-t="mainSkill"></span><select name="skill" id="skillSelect"></select></label>
         <label><span data-t="experience"></span><input name="exp" type="number" inputmode="numeric" min="0" max="60" value="0"></label>
@@ -103,11 +103,11 @@
         <button class="btn btn-light btn-block" onclick="reportHeat()" data-t="reportHeat"></button>
         <div class="heat-help"></div>
         <label class="small"><span data-t="sosContact"></span>
-          <input id="sosContact" type="tel" inputmode="numeric" maxlength="10" placeholder="9876543210" onchange="saveContact()">
+          <input id="sosContact" type="tel" inputmode="tel" data-phone maxlength="20" placeholder="9876543210" onchange="saveContact()">
         </label>
         <div class="row">
-          <a class="btn btn-light" href="tel:112">📞 112 <span data-t="police"></span></a>
-          <a class="btn btn-light" href="tel:108">🚑 108 <span data-t="ambulance"></span></a>
+          <a class="btn btn-light" href="tel:112" data-emergency>📞 <b>112</b> <span data-t="police"></span></a>
+          <a class="btn btn-light" href="tel:108" data-only-country="IN">🚑 108 <span data-t="ambulance"></span></a>
         </div>
       </div>
       <div id="rightsHelper" class="card"></div>
@@ -203,6 +203,7 @@
   <script src="../js/config.js"></script>
   <script src="../js/report.js"></script>
   <script src="../js/data.js"></script>
+  <script src="../js/countries.js"></script>
   <script src="../js/wage.js"></script>
   <script src="../js/safety.js"></script>
   <script src="../js/live.js"></script>

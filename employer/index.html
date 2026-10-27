@@ -33,7 +33,7 @@
       <div class="hero"><h1 data-t="onboardEmployerTitle"></h1><p data-t="onboardHint"></p></div>
       <form id="onboardForm" class="card form" autocomplete="on">
         <label><span data-t="yourName"></span><input name="name" required maxlength="60" data-t-ph="yourNamePh" autocomplete="name"></label>
-        <label><span data-t="phone"></span><input name="phone" type="tel" inputmode="numeric" pattern="[6-9][0-9]{9}" maxlength="10" required placeholder="9876543210" autocomplete="tel-national"></label>
+        <label><span data-t="phone"></span><input name="phone" type="tel" inputmode="tel" data-phone maxlength="20" required placeholder="9876543210" autocomplete="tel-national"></label>
         <button class="btn btn-primary btn-block btn-big" type="submit" data-t="continueBtn"></button>
       </form>
       <div class="card account-box"></div>
@@ -191,6 +191,7 @@
   <script src="../js/config.js"></script>
   <script src="../js/report.js"></script>
   <script src="../js/data.js"></script>
+  <script src="../js/countries.js"></script>
   <script src="../js/wage.js"></script>
   <script src="../js/safety.js"></script>
   <script src="../js/live.js"></script>

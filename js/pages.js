@@ -8,7 +8,7 @@ const WM = { map: null, layer: null, rows: [], skill: 'all' };
 
 // A job's wage as an 8-hour day, so short and long jobs can be compared
 function dayRate(b) {
-  return Math.round((b.agreed_wage * 8) / Math.max(b.hours, 4) / 10) * 10;
+  return roundMoney((b.agreed_wage * 8) / Math.max(b.hours, 4));
 }
 
 function nearestArea(p) {
@@ -27,7 +27,7 @@ async function initWageMap() {
   WM.map = L.map('wageMap').setView([App.here.lat, App.here.lng], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(WM.map);
   WM.layer = L.layerGroup().addTo(WM.map);
-  const { data } = await db.rpc('wage_map_rows'); // confirmed jobs, placed to about 1 km
+  const { data } = await db.rpc('wage_map_rows', { p_country: myCountry().code }); // confirmed jobs in this country, placed to about 1 km
   WM.rows = data || [];
   drawWageMap();
 }
@@ -50,21 +50,21 @@ function drawWageMap() {
   WM.layer.clearLayers();
   const list = Object.entries(cells).map(([key, jobs]) => {
     const [type, lat, lng] = key.split('|');
-    const avg = Math.round(jobs.reduce((s, b) => s + dayRate(b), 0) / jobs.length / 10) * 10;
-    const r = WORK_TYPES[type];
+    const avg = roundMoney(jobs.reduce((s, b) => s + dayRate(b), 0) / jobs.length);
+    const r = tradeRange(type);
     const level = avg < r.min ? 'low' : avg > r.max ? 'high' : 'fair';
-    return { type, lat: +lat, lng: +lng, avg, n: jobs.length, level, area: nearestArea({ lat: +lat, lng: +lng }) };
+    return { type, lat: +lat, lng: +lng, avg, n: jobs.length, level, r, area: nearestArea({ lat: +lat, lng: +lng }) };
   }).sort((a, b) => b.n - a.n);
   const colors = { low: '#C62828', fair: '#1E8E4F', high: '#24408E' };
   list.forEach((c) => {
     L.circleMarker([c.lat, c.lng], { radius: 8 + Math.min(14, c.n * 2), color: colors[c.level], fillOpacity: 0.45 })
       .addTo(WM.layer)
-      .bindPopup(`<b>${WORK_TYPES[c.type].icon} ${t(c.type)}</b><br>${esc(c.area)}<br>₹${c.avg} / ${t('dayUnit')} · ${c.n} ${t('reportJobs').toLowerCase()}<br>${t('fairRange')}: ₹${WORK_TYPES[c.type].min}–₹${WORK_TYPES[c.type].max}`);
+      .bindPopup(`<b>${WORK_TYPES[c.type].icon} ${t(c.type)}</b><br>${esc(c.area)}<br>${money(c.avg)} / ${t('dayUnit')} · ${c.n} ${t('reportJobs').toLowerCase()}<br>${t('fairRange')}: ${money(c.r.min)}–${money(c.r.max)}`);
   });
   document.getElementById('wageNote').textContent = tf('wageMapNote', rows.length);
   document.getElementById('wageList').innerHTML = list.slice(0, 20).map((c) => `
     <div class="rest-item"><span><i class="dot dot-${c.level}"></i> ${WORK_TYPES[c.type].icon} ${t(c.type)} · ${esc(c.area)}</span>
-      <span><b>₹${c.avg}</b> <small class="muted">(${c.n})</small></span></div>`).join('') ||
+      <span><b>${money(c.avg)}</b> <small class="muted">(${c.n})</small></span></div>`).join('') ||
     `<p class="muted">${t('wageMapEmpty')}</p>`;
 }
 
@@ -102,7 +102,7 @@ function evidenceEvents(b) {
     ev.push([b.started_at, b.start_m != null ? tf('ev_startedAt', b.start_m) : t('ev_started')]);
   }
   if (b.effort_status) {
-    ev.push([b.effort_at, `😓 ${t('effortTitle')}: ${effortClaimText(b)} (+₹${b.effort_extra})`]);
+    ev.push([b.effort_at, `😓 ${t('effortTitle')}: ${effortClaimText(b)} (+${money(b.effort_extra, b.currency)})`]);
     if (b.effort_status !== 'pending') ev.push([null, b.effort_status === 'accepted' ? tf('effortAccepted', b.effort_extra) : tf('effortRefused', b.effort_extra)]);
   }
   if (b.completed_at) ev.push([b.completed_at, b.rain_off ? t('ev_rain') : tf('ev_completed', fmtDuration(workedMinutes(b)), b.overtime_hours)]);
@@ -121,7 +121,7 @@ function drawEvidence() {
   const events = evidenceEvents(b).map(([at, text]) =>
     `<li><small>${at ? fmtDateTime(at) : '—'}</small><span>${esc(text)}</span></li>`).join('');
   const msgs = EV.msgs.map((m) => `<li><small>${fmtDateTime(m.created_at)} · ${m.sender === 'worker' ? t('worker') : t('employer')}</small><span>${esc(t('ph_' + m.phrase))}</span></li>`).join('');
-  const mats = EV.mats.map((m) => `<li><span>${esc(m.item)} · ₹${m.amount}</span><span>${t('mat_' + m.status)}</span></li>`).join('');
+  const mats = EV.mats.map((m) => `<li><span>${esc(m.item)} · ${money(m.amount)}</span><span>${t('mat_' + m.status)}</span></li>`).join('');
   document.getElementById('evidence').innerHTML = `
     <div id="slipPrint">
       <div class="slip-head"><b>⚖️ Worker Buddy</b><span>${t('evidenceTitle')} · WB-${b.id.slice(0, 8).toUpperCase()}</span></div>
@@ -131,9 +131,9 @@ function drawEvidence() {
         <div><span>${t('employer')}</span><span>${esc(e.name || '—')}${e.gstin ? ' · GST ' + esc(e.gstin) : ''} · ${scoreBadge(e)}</span></div>
         <div><span>${t('worker')}</span><span>${esc(EV.worker ? EV.worker.name : '—')}</span></div>
         <div><span>${t('hours')}</span><span>${b.hours} ${t('hoursUnit')}</span></div>
-        <div><span>${t('agreedWage')}</span><span>₹${b.agreed_wage} (${t('fairRange')} ₹${b.wage_min}–₹${b.wage_max})</span></div>
-        ${b.travel_pay ? `<div><span>${t('travelPay')}</span><span>+₹${b.travel_pay}</span></div>` : ''}
-        <div><span><b>${t('totalPaid')}</b></span><span><b>₹${amountOf(b)}</b></span></div>
+        <div><span>${t('agreedWage')}</span><span>${money(b.agreed_wage, b.currency)} (${t('fairRange')} ${money(b.wage_min, b.currency)}–${money(b.wage_max, b.currency)})</span></div>
+        ${b.travel_pay ? `<div><span>${t('travelPay')}</span><span>+${money(b.travel_pay, b.currency)}</span></div>` : ''}
+        <div><span><b>${t('totalPaid')}</b></span><span><b>${money(amountOf(b), b.currency)}</b></span></div>
       </div>
       <h3>${t('ev_timeline')}</h3>
       <ul class="timeline">${events}</ul>
@@ -188,7 +188,7 @@ Object.assign(T.en, {
   ev_startedAt: (m) => `Work started with the employer’s OTP, ${m} m from the site`,
   ev_completed: (d, o) => `Work completed after ${d}${o ? ` (${o} h overtime)` : ''}`,
   ev_rain: 'Stopped by rain (paid for time worked, at least half)',
-  ev_paid: (n) => `Employer marked ₹${n} as paid`,
+  ev_paid: (n) => `Employer marked ${money(n)} as paid`,
   ev_disputed: 'Worker said the money was NOT received',
   ev_confirmed: (r) => `Worker confirmed receiving it (receipt ${r})`,
   ev_openDispute: 'Open dispute: the worker has not received this payment.',
@@ -215,7 +215,7 @@ Object.assign(T.ta, {
   ev_startedAt: (m) => `முதலாளியின் OTP உடன் வேலை தொடங்கியது, இடத்திலிருந்து ${m} மீ`,
   ev_completed: (d, o) => `${d} பின் வேலை முடிந்தது${o ? ` (${o} மணி கூடுதல்)` : ''}`,
   ev_rain: 'மழையால் நின்றது (செய்த நேரத்துக்கு, குறைந்தது பாதி)',
-  ev_paid: (n) => `₹${n} கொடுத்ததாக முதலாளி குறித்தார்`,
+  ev_paid: (n) => `${money(n)} கொடுத்ததாக முதலாளி குறித்தார்`,
   ev_disputed: 'பணம் கிடைக்கவில்லை என்று வேலையாள் சொன்னார்',
   ev_confirmed: (r) => `பெற்றதாக வேலையாள் உறுதி செய்தார் (ரசீது ${r})`,
   ev_openDispute: 'திறந்த புகார்: வேலையாளுக்கு இந்தப் பணம் கிடைக்கவில்லை.',
@@ -242,7 +242,7 @@ Object.assign(T.hi, {
   ev_startedAt: (m) => `मालिक के OTP से काम शुरू हुआ, जगह से ${m} मीटर पर`,
   ev_completed: (d, o) => `${d} बाद काम पूरा${o ? ` (${o} घंटे ओवरटाइम)` : ''}`,
   ev_rain: 'बारिश से रुका (किए गए समय का, कम से कम आधा)',
-  ev_paid: (n) => `मालिक ने ₹${n} दिया लिखा`,
+  ev_paid: (n) => `मालिक ने ${money(n)} दिया लिखा`,
   ev_disputed: 'मज़दूर ने कहा पैसे नहीं मिले',
   ev_confirmed: (r) => `मज़दूर ने पैसे मिलना पक्का किया (रसीद ${r})`,
   ev_openDispute: 'खुली शिकायत: मज़दूर को यह भुगतान नहीं मिला।',

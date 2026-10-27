@@ -32,12 +32,13 @@ function cacheState() {
 // ---------- Profile ----------
 async function loadMe() {
   W.me = await myProfile('worker');
+  if (W.me) setMyCountry(W.me.country);
 }
 
 function editProfile() {
   const f = document.getElementById('onboardForm');
   f.name.value = W.me ? W.me.name : '';
-  f.phone.value = W.me ? W.me.phone : '';
+  f.phone.value = W.me ? phoneLocal(W.me.phone) : '';
   f.skill.value = W.me ? W.me.skill : 'coolie';
   f.exp.value = W.me ? W.me.experience_years || 0 : 0;
   f.iti.value = W.me ? W.me.iti_cert || '' : '';
@@ -58,7 +59,7 @@ function enterOnboarding(on) {
 async function saveProfile(event) {
   event.preventDefault();
   const f = event.target;
-  const row = { name: f.name.value.trim(), phone: f.phone.value.replace(/\D/g, ''), skill: f.skill.value,
+  const row = { name: f.name.value.trim(), phone: phoneIntl(f.phone.value), country: (W.me && W.me.country) || myCountry().code, skill: f.skill.value,
     experience_years: Math.min(60, Math.max(0, parseInt(f.exp.value, 10) || 0)),
     iti_cert: f.iti.value.trim().length >= 4 ? f.iti.value.trim() : null,
     upi_id: f.upi.value.trim() || null,
@@ -67,7 +68,7 @@ async function saveProfile(event) {
     city: f.city.value.trim() || null,
     tools: [...document.querySelectorAll('#toolsChecks .chip.active')].map((c) => c.dataset.tool),
     is_mestri: f.mestri.checked };
-  if (!/^[6-9]\d{9}$/.test(row.phone)) return showToast(t('badPhone'));
+  if (!row.phone) return showToast(t('badPhone'));
   if (!ageOk(row.birth_year)) return showToast(t('under18'));
   // Live updates follow the skill, so it can't change in the middle of a job
   if (W.me && W.active && row.skill !== W.me.skill) return showToast(t('finishJobFirst'));
@@ -76,7 +77,7 @@ async function saveProfile(event) {
     ? db.from('workers').update(row).eq('id', W.me.id)
     : db.from('workers').insert({ ...row, device_id: deviceId(), lat: App.here.lat, lng: App.here.lng });
   const { error } = await query;
-  if (error) return showToast(t('saveError'));
+  if (error) return trustError(error) || showToast(t('saveError'));
   await loadMe();
   cacheState();
   renderAccount();
@@ -151,7 +152,7 @@ async function loadEarnings() {
       .eq('worker_id', W.me.id).not('worker_confirmed_at', 'is', null).gte('worker_confirmed_at', start.toISOString());
     if (data) total = data.reduce((s, b) => s + amountOf(b), 0);
   }
-  document.getElementById('todayEarnings').textContent = `₹${total}`;
+  document.getElementById('todayEarnings').textContent = `${money(total)}`;
 }
 
 // ---------- Live updates ----------
@@ -171,7 +172,7 @@ function listen() {
   if (W.listening) return;
   W.listening = true;
   listenMaterials((row) => {
-    if (row.status === 'approved') showToast(`✅ ${row.item} · ₹${row.amount}`);
+    if (row.status === 'approved') showToast(`✅ ${row.item} · ${money(row.amount)}`);
     renderActive();
   });
   // A later job taken by someone else no longer comes as a live update (only its two people can read it)
@@ -217,7 +218,7 @@ function onBookingChange(payload) {
     // The employer cancelled before work started
     const why = b.cancelled_by === 'employer' && b.cancel_note ? `\n${cancelLine(b)}` : '';
     showToast((b.cancel_reason === 'employer_unpaid' ? t('employerClosedUnpaid')
-      : b.showup_pay ? t('showupForWorker') : `${statusLabel('cancelled')}: ${t(b.type)}, ${b.area}`) + why);
+      : b.showup_pay ? tf('showupForWorker', b.showup_pay) : `${statusLabel('cancelled')}: ${t(b.type)}, ${b.area}`) + why);
     W.active = null;
     W.employer = null;
     cacheState();
@@ -336,7 +337,7 @@ async function showRequest(b) {
       </div>
       <button type="button" class="btn btn-light btn-small listen-btn" data-say="${attr(requestSpeech(b, employer))}">${t('listenJob')}</button>
     </div>
-    <div class="request-pay">₹${b.agreed_wage}<small>₹${b.wage_min} – ₹${b.wage_max} ${t('estimate').toLowerCase()}</small></div>
+    <div class="request-pay">${money(b.agreed_wage, b.currency)}<small>${money(b.wage_min, b.currency)} – ${money(b.wage_max, b.currency)} ${t('estimate').toLowerCase()}</small></div>
     <div class="tags">${tags}</div>
     ${b.perks && b.perks.length ? `<div class="tags">${perksHTML(b.perks)}</div>` : ''}
     ${b.preferred_worker_id ? `<p class="preferred-note">${t('requestedYou')}</p>` : ''}
@@ -345,7 +346,7 @@ async function showRequest(b) {
     <div id="siteTags"></div>
     ${b.group_size === 1 && offerChoices(b).length ? `
       <div class="offer-row"><span class="muted small">${t('askMore')}</span>
-        ${offerChoices(b).map((n) => `<button type="button" class="chip" onclick="makeOffer(${n})">₹${n}</button>`).join('')}
+        ${offerChoices(b).map((n) => `<button type="button" class="chip" onclick="makeOffer(${n})">${money(n)}</button>`).join('')}
       </div>` : ''}
     <div class="row">
       <button class="btn btn-light btn-big" onclick="declineRequest()">${t('decline')}</button>
@@ -505,7 +506,7 @@ function renderActive() {
   } else if (b.status === 'completed') {
     speech = tf('waitingPayment', amount + approvedMaterials());
     action = `<p class="wait-pay"><span class="pulse-dot"></span>${tf('waitingPayment', amount + approvedMaterials())} ${speakButton(speech)}</p>
-      ${b.overtime_hours ? `<p class="overtime">${t('overtimeLabel')}: ${b.overtime_hours} h · +₹${otRate(b) * b.overtime_hours}</p>` : ''}
+      ${b.overtime_hours ? `<p class="overtime">${t('overtimeLabel')}: ${b.overtime_hours} h · +${money(otRate(b) * b.overtime_hours, b.currency)}</p>` : ''}
       ${b.travel_pay ? `<p class="small">${tf('travelTag', b.travel_pay)}</p>` : ''}
       ${b.rain_off ? `<p class="overtime">${tf('rainNote', amount)}</p>` : ''}
       ${W.me.upi_id ? `<button class="btn btn-upi btn-block btn-big" onclick="showUpiQR(W.active, W.me, amountOf(W.active) + approvedMaterials())">${tf('myUpiQrBtn', amount + approvedMaterials())}</button>`
@@ -540,13 +541,13 @@ function renderActive() {
       <div class="request-main">
         <div class="job-icon">${WORK_TYPES[b.type].icon}</div>
         <div><h3>${t(b.type)}</h3><p class="muted">📍 ${esc(b.area)} · ⏱️ ${b.hours} ${t('hoursUnit')}</p></div>
-        <div class="pay-chip">₹${amount}</div>
+        <div class="pay-chip">${money(amount)}</div>
       </div>
       <div class="person">
         <div class="avatar">${esc((e.name || '?').slice(0, 1).toUpperCase())}</div>
         <div><b>${esc(e.name)}</b><div>${scoreBadge(e)}</div></div>
-        ${e.phone ? `<a class="icon-btn" href="tel:${e.phone}" aria-label="${t('call')}">📞</a>
-        <a class="icon-btn wa" target="_blank" rel="noopener" href="https://wa.me/91${e.phone}" aria-label="${t('whatsapp')}">💬</a>` : ''}
+        ${e.phone ? `<a class="icon-btn" href="${attr(telHref(e.phone))}" aria-label="${t('call')}">📞</a>
+        <a class="icon-btn wa" target="_blank" rel="noopener" href="${attr(waHref(e.phone))}" aria-label="${t('whatsapp')}">💬</a>` : ''}
       </div>
       ${action}
       ${effortHTML('worker', b)}
@@ -683,7 +684,7 @@ function laterCard(b, mine) {
         ${b.preferred_worker_id ? `<br><span class="small">${t('requestedYou')}</span>` : ''}
       </div>
       <div class="actions">
-        <b class="pay-chip">₹${b.agreed_wage}</b>
+        <b class="pay-chip">${money(b.agreed_wage, b.currency)}</b>
         ${mine ? `<button class="btn btn-light btn-small" onclick="cantCome('${b.id}')">${t('cantCome')}</button>`
           : `<button class="btn btn-accept btn-small" onclick="acceptLater('${b.id}')">${t('acceptLater')}</button>`}
       </div>
@@ -804,12 +805,12 @@ function drawEarnings() {
   const disputed = W.records.filter((b) => b.disputed && !b.worker_confirmed_at);
   document.getElementById('earningsSummary').innerHTML = `
     <div class="stats stats-3">
-      <div><small>${t('thisWeek')}</small><b>₹${totals.week}</b></div>
-      <div><small>${t('thisMonth')}</small><b>₹${totals.month}</b></div>
-      <div><small>${t('allTime')}</small><b>₹${totals.all}</b></div>
+      <div><small>${t('thisWeek')}</small><b>${money(totals.week)}</b></div>
+      <div><small>${t('thisMonth')}</small><b>${money(totals.month)}</b></div>
+      <div><small>${t('allTime')}</small><b>${money(totals.all)}</b></div>
     </div>
     ${impactHTML(confirmed)}
-    ${W.records.some((b) => b.showup_pay) ? `<p class="small">🚶 ${t('showupLabel')}: ₹${W.records.filter((b) => b.showup_paid_at).reduce((s, b) => s + b.showup_pay, 0)}${W.records.some((b) => b.showup_pay && !b.showup_paid_at) ? ' · ' + tf('showupOwed', W.records.filter((b) => b.showup_pay && !b.showup_paid_at).reduce((s, b) => s + b.showup_pay, 0)) : ''}</p>` : ''}
+    ${W.records.some((b) => b.showup_pay) ? `<p class="small">🚶 ${t('showupLabel')}: ${money(W.records.filter((b) => b.showup_paid_at).reduce((s, b) => s + b.showup_pay, 0))}${W.records.some((b) => b.showup_pay && !b.showup_paid_at) ? ' · ' + tf('showupOwed', W.records.filter((b) => b.showup_pay && !b.showup_paid_at).reduce((s, b) => s + b.showup_pay, 0)) : ''}</p>` : ''}
     <p class="muted small">✅ ${t('confirmedPayments')}: ${confirmed.length} · ⚠️ ${t('disputedPayments')}: ${disputed.length}</p>
     <div class="row">
       <button class="btn btn-dark" onclick="openStatement(W.me, slips())">${t('downloadStatement')}</button>
@@ -835,7 +836,7 @@ function drawEarnings() {
         ${b.rating_by_worker ? `<span class="stars-small">${'★'.repeat(b.rating_by_worker)}</span>` : ''}
       </div>
       <div class="actions">
-        <b class="pay-chip">₹${amountOf(b)}</b>
+        <b class="pay-chip">${money(amountOf(b), b.currency)}</b>
         ${b.worker_confirmed_at ? `<button class="btn btn-light btn-small" onclick="openRecordSlip(${i})">🧾</button>` : ''}
         ${b.disputed || b.worker_confirmed_at ? `<a class="btn btn-light btn-small" target="_blank" rel="noopener" href="${disputeLink(b)}">⚖️</a>` : ''}
       </div>
@@ -918,7 +919,7 @@ App.onVoice = (cmd, digits) => {
   if (cmd === 'received' && b && b.status === 'paid' && !b.worker_confirmed_at) { confirmPay(true); return true; }
   if (cmd === 'read') {
     if (W.request) speak(requestSpeech(W.request, W.requestEmployer));
-    else if (b) speak(`${t(b.type)}, ${b.area}. ${statusLabel(b.status)}. ₹${amountOf(b)}`);
+    else if (b) speak(`${t(b.type)}, ${b.area}. ${statusLabel(b.status)}. ${money(amountOf(b), b.currency)}`);
     else speak(W.me.online ? t('onlineWaiting') : t('offlineHint'));
     return true;
   }

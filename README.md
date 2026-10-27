@@ -207,6 +207,7 @@ Open http://localhost:5500. For the live demo, open `/employer/` on one phone or
 | `js/data.js` | Work types, places, schemes, English/Tamil text | Member 4 |
 | `js/config.js` | Supabase address and publishable key | Member 4 |
 | `js/trust.js` | Privacy notice and consent, report and block, download or delete my data | Member 4 |
+| `js/countries.js` | Country packs: money in the local currency, phone numbers in international form, local date and speech language | Member 4 |
 | `privacy/` | Privacy notice and terms (English, Tamil, Hindi) | Member 4 |
 | `admin/` | Reports and suspensions, for admins only | Member 4 |
 | `supabase/tests/` | Builds the database from every migration and checks the safety rules (runs on every pull request) | Member 4 |

@@ -55,8 +55,7 @@ async function accSignInGoogle() {
 }
 
 function accPhoneNumber(raw) {
-  const d = String(raw || '').replace(/\D/g, '').replace(/^(91|0)(?=[6-9]\d{9}$)/, '');
-  return /^[6-9]\d{9}$/.test(d) ? '+91' + d : null;
+  return phoneIntl(raw);
 }
 
 async function accSendOtp(event) {
@@ -124,8 +123,8 @@ function accountHTML() {
          </form>
          <button type="button" class="link-btn small" onclick="Acc.step='idle'; renderAccount()">${t('accChangeNumber')}</button>`
       : `<form class="row acc-row" onsubmit="accSendOtp(event)">
-           <span class="acc-cc">+91</span>
-           <input name="mobile" class="input" type="tel" inputmode="numeric" maxlength="10" required placeholder="9876543210" autocomplete="tel-national">
+           <span class="acc-cc">+${esc(myCountry().calling_code)}</span>
+           <input name="mobile" class="input" type="tel" inputmode="tel" maxlength="20" required placeholder="${attr(myCountry().phone_example)}" autocomplete="tel-national">
            <button class="btn btn-dark btn-small" type="submit">${t('accSendOtp')}</button>
          </form>`;
   }
