@@ -1,225 +1,121 @@
-/* app-look.css — the bold look: near-black ink, one bright yellow, white cards with thin edges,
-   a black segmented switch, a dark "live" hero card and a flat tab bar whose active tab is a yellow block.
-   Loaded last on every page and only restyles theme.css; take the <link> out to go back to the old look.
-   Contrast: ink on yellow 13:1, yellow on ink 12:1, ink on white 18:1, --muted on white 5.6:1.
-   Yellow is never used for text on white (1.6:1). */
+/* app-look.css — Worker Buddy's own signature, built on the pay slip: the thing a worker keeps.
+   Slips have a torn edge, "paid" gets a green rubber stamp, and money counts up when it appears.
+   Uses theme.css colours only (navy, saffron, paid green); loaded last, it only adds to theme.css.
+   Take the <link> out to drop it. Motion is transform/opacity only and stops for reduced motion. */
 
 :root {
-  --yellow: #FFC400;
-  --yellow-hover: #F0B800;
-  --yellow-soft: #FFF5CC;    /* ink text on it: 16:1 */
-  --ink: #0B1220;
-  --ink-2: #1A2333;
-  --navy: var(--ink);
-  --navy-2: var(--ink-2);
-  --orange: var(--ink);       /* old accent: was text, links and focus rings; now ink */
-  --orange-hover: var(--ink-2);
-  --orange-2: var(--yellow);  /* decoration only */
-  --orange-soft: var(--yellow-soft);
-  --bg: #F4F5F7;
-  --card: #FFFFFF;
-  --fill: #EEF0F3;
-  --text: var(--ink);
-  --muted: #545D6E;
-  --line: #E1E4EA;
-  --line-strong: #858C99;
-  --radius: 14px;
-  --radius-sm: 10px;
-  --shadow-sm: none;
-  --shadow-md: 0 6px 18px rgba(11, 18, 32, .08);
-  --shadow-pop: 0 12px 32px rgba(11, 18, 32, .18);
-  --ring: 0 0 0 3px rgba(11, 18, 32, .3);
-  --grid-lines: linear-gradient(rgba(255, 255, 255, .045) 1px, transparent 1px) 0 0 / 28px 28px,
-                linear-gradient(90deg, rgba(255, 255, 255, .045) 1px, transparent 1px) 0 0 / 28px 28px;
+  --tear: 10px;   /* size of one tooth on a torn slip edge */
+  --stamp: #15803D;
+  --paper: #FFFDF8;
 }
 
-::selection { background: var(--yellow); color: var(--ink); }
-a { color: var(--ink); text-decoration-thickness: 2px; text-decoration-color: var(--yellow); }
-
-/* ---------- Top bar: white, a yellow logo tile, outlined controls ---------- */
-.topbar, .topbar-worker, .topbar-employer { background: var(--card); color: var(--ink); border-bottom: 1px solid var(--line); }
+/* ---------- Brand: the emoji sits in a soft saffron tile with a dotted "slip" edge ---------- */
 .topbar .brand, .brand {
-  display: inline-grid; grid-template-columns: auto minmax(0, 1fr); grid-auto-flow: row;
-  column-gap: 10px; row-gap: 1px; align-items: center; color: var(--ink); text-decoration: none;
+  display: inline-grid; grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px; row-gap: 1px; align-items: center; text-decoration: none;
 }
 .brand-logo {
-  grid-row: span 2; width: 36px; height: 36px; border-radius: 9px; background: var(--yellow);
+  grid-row: span 2; width: 38px; height: 38px; border-radius: 12px;
+  background: var(--orange-soft); outline: 2px dashed rgba(194, 65, 12, .35); outline-offset: -5px;
   display: grid; place-items: center; font-size: 1.15rem; line-height: 1;
 }
-.brand-name { font-weight: 800; letter-spacing: -.01em; }
-.app-tag, body[data-app="employer"] .app-tag {
-  background: transparent; color: var(--muted); padding: 0; border-radius: 0;
-  font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+
+/* ---------- Torn slip edge: the bottom of the landing hero and the pay slips ---------- */
+.landing .hero, .slip, .payslip {
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - var(--tear)) no-repeat,
+                conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--tear) * 2) var(--tear) repeat-x;
+          mask: linear-gradient(#000 0 0) top / 100% calc(100% - var(--tear)) no-repeat,
+                conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--tear) * 2) var(--tear) repeat-x;
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
 }
-.lang-select, .topbar-employer .lang-select, .lang-btn, .topbar-worker .lang-btn, .topbar-employer .lang-btn {
-  background: var(--card) !important; color: var(--ink);
-  border: 1px solid var(--ink); border-radius: 8px; font-weight: 700;
-}
-
-/* ---------- Surfaces: flat white cards with a thin edge ---------- */
-.card, .job-card, .scheme, .mini-card, .rest-item, .feature, .estimate, .flow, .tip, .stats div, .type-btn, .sos-card {
-  border: 1px solid var(--line); box-shadow: none;
-}
-.job-card:hover, .app-card:hover { box-shadow: var(--shadow-md); }
-.job-icon { background: var(--yellow-soft); border-radius: 12px; }
-.card .stats div, .card .estimate, .card .mini-card, .card .job-card { background: var(--bg); border-color: transparent; }
-
-/* The hero is the "live" card: ink with a faint grid, a yellow glow and a pulsing live dot */
-.hero {
-  background: radial-gradient(120% 90% at 85% 0%, rgba(255, 196, 0, .16), transparent 60%), var(--grid-lines), var(--ink);
-  border-radius: var(--radius); border: 0;
-}
-.hero::after { display: none; }
-.landing .hero::after {
-  display: block; content: ""; position: absolute; left: 22px; top: 18px; right: auto; bottom: auto;
-  width: 8px; height: 8px; border-radius: 50%; background: #3DDC84;
-  box-shadow: 0 0 0 0 rgba(61, 220, 132, .6); animation: live-dot 1.8s ease-out infinite;
-}
-@keyframes live-dot { 70%, 100% { box-shadow: 0 0 0 8px rgba(61, 220, 132, 0); } }
-.hero h1 { color: #fff; padding-right: 0; margin-top: 10px; }
-.hero h1::first-line { color: var(--yellow); }
-.hero p { color: #C9D0DC; }
-
-/* ---------- Buttons: yellow primary, ink secondary, 10px corners ---------- */
-.btn { border-radius: var(--radius-sm); }
-.btn-light.btn-block { border-radius: var(--radius-sm); }
-.btn-primary { background: var(--yellow); color: var(--ink); }
-.btn-primary:hover { background: var(--yellow-hover); }
-.btn-dark { background: var(--ink); color: #fff; }
-.btn-light { background: var(--card); color: var(--ink); border-color: var(--ink); box-shadow: none; }
-.btn-light:hover { background: var(--fill); }
-.link-btn { color: var(--ink); text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 2px; }
-.duty-btn { border-radius: var(--radius-sm); }
-.sos-btn { border-radius: var(--radius-sm); }
-
-/* ---------- Landing: one yellow card, one ink card ---------- */
-.app-card { border-radius: var(--radius); border: 1px solid transparent; }
-.app-card-worker { background: var(--yellow); color: var(--ink); }
-.app-card-worker b, .app-card-worker small { color: var(--ink); }
-.app-card-employer { background: var(--ink); }
-.app-card-icon { border-radius: 12px; }
-.app-card-worker .app-card-go { background: var(--ink); color: #fff; }
-.app-card-employer .app-card-go { background: var(--yellow); color: var(--ink); }
-.app-card-go { border-radius: 8px; }
-.flow li::before { color: var(--ink); background: var(--yellow); border-radius: 8px; }
-
-/* ---------- Switches and chips: black when chosen ---------- */
-.segmented { background: var(--card); border: 1px solid var(--ink); border-radius: var(--radius-sm); padding: 3px; gap: 3px; }
-.segmented button { border-radius: 7px; color: var(--ink); font-weight: 700; }
-.segmented button.active { background: var(--ink); color: #fff; box-shadow: none; }
-.chip { border-radius: 8px; border-color: var(--line); background: var(--card); }
-.chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
-.type-btn { border-radius: var(--radius-sm); }
-.type-btn.active { border-color: var(--ink); background: var(--yellow-soft); }
-.tag { border-radius: 6px; }
-.pay-chip { background: var(--yellow); color: var(--ink); border-radius: 8px; }
-.stepper-input { border-color: var(--ink); border-radius: var(--radius-sm); }
-.stepper-input button { color: var(--ink); }
-.check input, .radio input { accent-color: var(--ink); }
-.form input:focus, .form select:focus, .input:focus, .sos-card input:focus, .otp-input:focus { border-color: var(--ink); }
-.form input, .form select, .input { border-radius: var(--radius-sm); }
-
-/* ---------- Big numbers ---------- */
-.stats div { border-radius: var(--radius); }
-.stats div::before { background: var(--yellow); border-radius: 3px; }
-.stats b, .wage-total, .big-timer b, .me-row b { color: var(--ink); }
-.otp-show { background: var(--grid-lines), var(--ink); border-radius: var(--radius); }
-.otp-show b, .otp-new { color: var(--yellow); }
-
-/* ---------- Tab bar: flat across the bottom, the open tab is a yellow block ---------- */
-.bottom-nav {
-  left: 0; right: 0; bottom: 0; max-width: none; margin: 0;
-  border-radius: 0; border: 0; border-top: 1px solid var(--line);
-  box-shadow: none; padding: 0 0 env(safe-area-inset-bottom);
-}
-.bottom-nav button { border-radius: 0; min-height: 60px; color: var(--muted); }
-.bottom-nav button.active { background: var(--yellow); color: var(--ink); }
-.bottom-nav button.active span { transform: none; }
-main { padding-bottom: 96px; }
-.sheet { padding-bottom: 96px; background: var(--bg); }
-.toast { bottom: calc(76px + env(safe-area-inset-bottom)); border-radius: var(--radius-sm); background: var(--ink); }
-.mic-btn { bottom: calc(76px + env(safe-area-inset-bottom)); background: var(--ink); box-shadow: var(--shadow-pop), 0 0 0 4px var(--yellow); }
-
-/* ---------- Popups ---------- */
-.modal-box { border-radius: var(--radius); }
-.request-modal .modal-box { border-radius: var(--radius) var(--radius) 0 0; }
-
-/* Focus: ink ring with a yellow halo, visible on white, yellow and ink */
-a:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible,
-.topbar a:focus-visible, .topbar button:focus-visible, .topbar select:focus-visible {
-  outline: 3px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 6px var(--yellow);
+.landing .hero { padding-bottom: calc(30px + var(--tear)); }
+/* A dashed "cut here" line across the hero, like the perforation on a slip book */
+.landing .hero::before {
+  content: ""; position: absolute; left: 22px; right: 22px; bottom: calc(var(--tear) + 12px);
+  border-top: 2px dashed rgba(255, 255, 255, .22); pointer-events: none;
 }
 
-/* ---------- Motion: what's on a new screen comes in one after another ---------- */
-.screen.active > *, .landing > * { animation: rise .38s var(--ease-out, ease-out) both; }
-.screen.active > :nth-child(2), .landing > :nth-child(2) { animation-delay: .05s; }
-.screen.active > :nth-child(3), .landing > :nth-child(3) { animation-delay: .1s; }
-.screen.active > :nth-child(4), .landing > :nth-child(4) { animation-delay: .15s; }
-.screen.active > :nth-child(5), .landing > :nth-child(5) { animation-delay: .2s; }
-.screen.active > :nth-child(n+6), .landing > :nth-child(n+6) { animation-delay: .25s; }
-@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-.bottom-nav button.active { animation: tab-fill .25s var(--ease-out, ease-out); }
-@keyframes tab-fill { from { background-color: transparent; } }
+/* ---------- PAID stamp: any element with .stamp-paid, and the confirmed pay slip ---------- */
+.stamp-paid {
+  display: inline-grid; place-items: center; padding: 6px 12px; border: 3px double var(--stamp); border-radius: 10px;
+  color: var(--stamp); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .85rem;
+  transform: rotate(-8deg); animation: stamp .45s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+@keyframes stamp {
+  0% { transform: rotate(-8deg) scale(2.4); opacity: 0; }
+  60% { transform: rotate(-8deg) scale(.92); opacity: 1; }
+  100% { transform: rotate(-8deg) scale(1); }
+}
 
-/* ---------- Opening animation (js/intro.js): a worker walks the route, the pay fills, the name rises ---------- */
+/* ---------- Stats: the first tile is today's slip, with a saffron tab on top ---------- */
+.stats div { position: relative; overflow: hidden; }
+#dutyBlock .stats div:first-child { background: var(--paper); }
+#dutyBlock .stats div:first-child::after {
+  content: ""; position: absolute; left: 16px; right: 16px; top: 0; height: 4px; border-radius: 0 0 4px 4px; background: var(--orange-2);
+}
+.counting { font-variant-numeric: tabular-nums; }
+
+/* ---------- Tab bar: the open tab gets a saffron bar that grows under it, and its icon hops ---------- */
+.bottom-nav button { position: relative; }
+.bottom-nav button::after {
+  content: ""; position: absolute; left: 30%; right: 30%; bottom: 3px; height: 3px; border-radius: 3px;
+  background: var(--orange-2); transform: scaleX(0); transition: transform .25s var(--ease-out, ease-out);
+}
+.bottom-nav button.active::after { transform: scaleX(1); }
+.bottom-nav button.active span { animation: hop .4s var(--ease-out, ease-out); }
+@keyframes hop { 40% { transform: translateY(-5px); } 100% { transform: none; } }
+
+/* ---------- Screens: a new screen slides in from the side like a page in a slip book,
+   and its cards follow one after another ---------- */
+.screen.active { animation: page-in .3s var(--ease-out, ease-out); }
+@keyframes page-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.landing > *, .sheet > *, .screen.active > .card { animation: deal .4s var(--ease-out, ease-out) both; }
+.landing > :nth-child(2), .sheet > :nth-child(2) { animation-delay: .04s; }
+.landing > :nth-child(3), .sheet > :nth-child(3) { animation-delay: .08s; }
+.landing > :nth-child(4), .sheet > :nth-child(4) { animation-delay: .12s; }
+.landing > :nth-child(n+5), .sheet > :nth-child(n+5) { animation-delay: .16s; }
+@keyframes deal { from { opacity: 0; transform: translateY(10px) rotate(-.6deg); } to { opacity: 1; transform: none; } }
+
+/* App cards on the landing page tilt a little toward the thumb, like picking up a card */
+.app-card { transition: transform .2s var(--ease-out, ease-out), box-shadow .2s ease; }
+@media (hover: hover) { .app-card:hover { transform: translateY(-3px) rotate(-.5deg); } }
+
+/* ---------- Opening animation (js/intro.js): a pay slip prints, gets stamped PAID, then folds into the logo ---------- */
 .intro {
-  position: fixed; inset: 0; z-index: 9999; overflow: hidden; cursor: pointer;
-  display: grid; place-items: center; color: #fff; text-align: center;
-  background: radial-gradient(60% 45% at 50% 40%, rgba(255, 196, 0, .14), transparent 70%), var(--grid-lines), var(--ink);
-  transition: opacity .45s ease, transform .45s ease;
+  position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; cursor: pointer;
+  background: var(--bg); color: var(--navy); text-align: center;
+  transition: opacity .4s ease;
 }
-.intro.out { opacity: 0; transform: scale(1.03); pointer-events: none; }
-.intro-stage { width: min(560px, 88vw); }
-.intro-eyebrow {
-  color: var(--yellow); font-size: .72rem; font-weight: 800; letter-spacing: .22em; text-transform: uppercase;
-  opacity: 0; animation: fade .4s ease .15s forwards;
+.intro.out { opacity: 0; pointer-events: none; }
+.intro-slip {
+  position: relative; width: min(300px, 78vw); padding: 20px 20px calc(58px + var(--tear)); text-align: left;
+  background: var(--paper); border-radius: 16px 16px 0 0; box-shadow: var(--shadow-md);
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - var(--tear)) no-repeat,
+                conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--tear) * 2) var(--tear) repeat-x;
+          mask: linear-gradient(#000 0 0) top / 100% calc(100% - var(--tear)) no-repeat,
+                conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--tear) * 2) var(--tear) repeat-x;
+  clip-path: inset(0 0 100% 0); animation: print .7s steps(14) .1s forwards;
 }
-.intro-route { position: relative; height: 44px; margin: 18px 6px 22px; }
-.intro-route::before {
-  content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed rgba(255, 255, 255, .35);
-  transform: scaleX(0); transform-origin: left; animation: draw .5s ease .2s forwards;
-}
-.intro-stop {
-  position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
-  border: 2px solid var(--yellow); background: var(--ink); opacity: 0; animation: fade .2s ease forwards;
-}
-.intro-stop.on { background: var(--yellow); }
-.intro-walker {
-  position: absolute; top: 50%; left: 0; width: 40px; height: 40px; margin: -20px 0 0 -20px;
-  border-radius: 11px; background: var(--yellow); display: grid; place-items: center; font-size: 1.3rem;
-  box-shadow: 0 0 24px rgba(255, 196, 0, .45);
-  transition: left .42s cubic-bezier(.5, 0, .2, 1);
-}
-.intro-hours { display: inline-grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
-.intro-hours i { width: 22px; height: 22px; border-radius: 5px; border: 2px solid rgba(255, 255, 255, .3); transition: background-color .15s ease, border-color .15s ease; }
-.intro-hours i.on { background: var(--yellow); border-color: var(--yellow); }
-.intro-count { margin: 10px 0 0; font-size: .9rem; color: #C9D0DC; font-weight: 600; }
-.intro-count b { color: var(--yellow); font-size: 1.05rem; font-variant-numeric: tabular-nums; }
-.intro-title { overflow: hidden; margin: 22px 0 8px; }
-.intro-title h1 {
-  margin: 0; color: #fff; font-size: clamp(2.4rem, 10vw, 4rem); font-weight: 800; letter-spacing: -.02em; line-height: 1.05;
-  text-transform: uppercase; transform: translateY(105%);
-}
-.intro.title-in .intro-title h1 { transform: none; transition: transform .55s cubic-bezier(.2, .8, .2, 1); }
-.intro-tag { margin: 0; color: #fff; font-weight: 600; }
-.intro-tag span { opacity: 0; display: inline-block; transform: translateY(6px); transition: opacity .3s ease, transform .3s ease; margin: 0 .25em; }
-.intro-tag span.on { opacity: 1; transform: none; }
-.intro-tag span:last-child { color: var(--yellow); }
+@keyframes print { to { clip-path: inset(0 0 0 0); } }
+.intro-slip h2 { margin: 0 0 12px; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--orange); }
+.intro-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-weight: 600; }
+.intro-row b { font-variant-numeric: tabular-nums; }
+.intro-row.total { border: 0; font-size: 1.25rem; font-weight: 800; }
+.intro-row.total b { color: var(--navy); }
+.intro-stampbox { position: absolute; right: 18px; bottom: calc(var(--tear) + 12px); pointer-events: none; }
+.intro-stampbox .stamp-paid { visibility: hidden; animation: none; font-size: 1rem; background: rgba(255, 253, 248, .85); }
+.intro.stamped .intro-stampbox .stamp-paid { visibility: visible; animation: stamp .45s cubic-bezier(.3, 1.6, .5, 1) both; }
+.intro.fold .intro-slip { transition: transform .45s cubic-bezier(.6, 0, .4, 1), opacity .45s ease; transform: scale(.14) rotate(-10deg); opacity: 0; }
+.intro-brand { position: absolute; display: grid; justify-items: center; gap: 10px; opacity: 0; transform: scale(.9); transition: opacity .35s ease, transform .45s cubic-bezier(.3, 1.4, .5, 1); }
+.intro.fold .intro-brand { opacity: 1; transform: none; transition-delay: .3s; }
+.intro-brand .brand-logo { width: 72px; height: 72px; border-radius: 22px; font-size: 2.2rem; outline-offset: -8px; }
+.intro-brand h1 { margin: 0; font-size: clamp(1.8rem, 8vw, 2.4rem); color: var(--navy); }
+.intro-brand p { margin: 0; color: var(--muted); font-weight: 600; max-width: 22em; padding: 0 16px; }
 .intro-skip {
-  position: absolute; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom));
-  background: transparent; border: 0; color: #C9D0DC; font: inherit; font-size: .82rem; font-weight: 600; min-height: 44px; padding: 0 8px;
+  position: absolute; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
+  background: none; border: 0; color: var(--muted); font: inherit; font-size: .85rem; font-weight: 700; min-height: 44px; padding: 0 10px;
 }
-.intro-bar { position: absolute; left: 0; bottom: 0; height: 4px; width: 100%; background: var(--yellow); transform: scaleX(0); transform-origin: left; }
-@keyframes fade { to { opacity: 1; } }
-@keyframes draw { to { transform: scaleX(1); } }
-html:lang(ta) .intro-title h1, html:lang(hi) .intro-title h1 { font-size: clamp(2rem, 8vw, 3.2rem); line-height: 1.3; }
 
 @media (prefers-reduced-motion: reduce) {
   .intro { display: none; }
-  .hero::after { animation: none; }
 }
-
-/* Worker home: today's pay is the "live" card, ink with a big yellow number */
-#dutyBlock .stats div:first-child { background: var(--grid-lines), var(--ink); border-color: var(--ink); }
-#dutyBlock .stats div:first-child small { color: #C9D0DC; }
-#dutyBlock .stats div:first-child b { color: var(--yellow); }

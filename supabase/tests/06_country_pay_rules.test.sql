@@ -49,6 +49,12 @@ insert into public.workers (id, device_id, name, phone, skill, birth_year, onlin
   ('20000000-0000-0000-0000-0000000000f3', 'd-k3', 'Kamau', '0712000033', 'plumber', 1990, true, -1.2156, 36.8219,
    '00000000-0000-0000-0000-0000000000f3', 'KE');
 
+-- The "other" job starts now; give the employer a GSTIN so the night-work rule (no "now" jobs
+-- 8 PM to 6 AM without one) doesn't fail this test when CI runs in the Nairobi evening
+alter table public.employers disable trigger user;
+update public.employers set gstin = '33ABCDE1234F1Z5' where id = '10000000-0000-0000-0000-0000000000f1';
+alter table public.employers enable trigger user;
+
 -- A Kenyan job below the floor is raised to it; overtime is 1.5x the hourly wage
 set role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000f1', false);

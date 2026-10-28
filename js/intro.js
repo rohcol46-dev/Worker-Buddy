@@ -1,60 +1,43 @@
-// intro.js — the opening animation, once per visit: a worker walks the route stop to stop, the day's
-// 8 hours fill up as paid, then "Worker Buddy" rises with "One worker. One job. Fair pay."
-// About 3.6 seconds; a tap, any key or the "Tap to skip" button ends it. Skipped when the phone asks
-// for less motion. The look lives in css/app-look.css (.intro).
+// intro.js — Worker Buddy's opening, once per visit: a pay slip prints line by line, a green PAID
+// stamp thumps onto it, then the slip folds away into the logo with the tagline. About 3 seconds;
+// a tap, any key or "Tap to skip" ends it, and it never plays when the phone asks for less motion.
+// Also counts money up from zero when a big number first shows (.stats b). Look: css/app-look.css.
 document.addEventListener('DOMContentLoaded', () => {
+  const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!calm) countUpStats();
+
   try {
     if (sessionStorage.getItem('wb_intro')) return;
     sessionStorage.setItem('wb_intro', '1');
   } catch (e) { return; } // storage blocked: don't risk playing it on every page
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (calm) return;
 
-  const STOPS = [0, 33.3, 66.6, 100];
-  const HOURS = 8;
-  const TOTAL = 3600;
+  const logo = (document.querySelector('.brand-logo') || {}).textContent || '🤝';
   const el = document.createElement('div');
   el.className = 'intro';
   el.setAttribute('role', 'presentation');
   el.innerHTML = `
-    <div class="intro-stage">
-      <p class="intro-eyebrow">${t('introEyebrow')}</p>
-      <div class="intro-route">
-        ${STOPS.map((x, i) => `<span class="intro-stop" style="left:${x}%;animation-delay:${0.25 + i * 0.1}s"></span>`).join('')}
-        <span class="intro-walker" aria-hidden="true">👷</span>
-      </div>
-      <div class="intro-hours" aria-hidden="true">${'<i></i>'.repeat(HOURS)}</div>
-      <p class="intro-count"><b>0</b> ${t('introHours')}</p>
-      <div class="intro-title"><h1>Worker Buddy</h1></div>
-      <p class="intro-tag"><span>${t('introLine1')}</span><span>${t('introLine2')}</span><span>${t('introLine3')}</span></p>
+    <div class="intro-slip" aria-hidden="true">
+      <h2>${t('introSlip')}</h2>
+      <div class="intro-row"><span>${t('introWork')}</span><b>8 h</b></div>
+      <div class="intro-row"><span>${t('introRate')}</span><b>${t('introFair')}</b></div>
+      <div class="intro-row total"><span>${t('introTotal')}</span><b class="intro-amount">0</b></div>
+      <div class="intro-stampbox"><span class="stamp-paid">${t('introPaid')}</span></div>
     </div>
-    <button type="button" class="intro-skip">${t('introSkip')}</button>
-    <span class="intro-bar"></span>`;
+    <div class="intro-brand">
+      <span class="brand-logo" aria-hidden="true">${logo}</span>
+      <h1>Worker Buddy</h1>
+      <p>${t('tagline')}</p>
+    </div>
+    <button type="button" class="intro-skip">${t('introSkip')}</button>`;
   document.body.appendChild(el);
 
-  const $ = (s) => el.querySelector(s);
-  const $$ = (s) => el.querySelectorAll(s);
-  const stops = $$('.intro-stop');
-  const walker = $('.intro-walker');
-  const cells = $$('.intro-hours i');
-  const count = $('.intro-count b');
-  const tags = $$('.intro-tag span');
+  const amount = el.querySelector('.intro-amount');
   const timers = [];
   const at = (ms, fn) => timers.push(setTimeout(fn, ms));
-
-  stops[0].classList.add('on');
-  STOPS.slice(1).forEach((x, i) => at(700 + i * 450, () => {
-    walker.style.left = x + '%';
-    at(420, () => stops[i + 1].classList.add('on'));
-  }));
-  cells.forEach((c, i) => at(700 + i * 150, () => { c.classList.add('on'); count.textContent = i + 1; }));
-  at(2000, () => el.classList.add('title-in'));
-  tags.forEach((s, i) => at(2350 + i * 200, () => s.classList.add('on')));
-
-  const bar = $('.intro-bar');
-  requestAnimationFrame(() => {
-    bar.style.transition = `transform ${TOTAL}ms linear`;
-    bar.style.transform = 'scaleX(1)';
-  });
+  at(800, () => countTo(amount, 800, 600, (n) => (typeof money === 'function' ? money(Math.round(n)) : '₹' + Math.round(n))));
+  at(1500, () => el.classList.add('stamped'));
+  at(2200, () => el.classList.add('fold'));
 
   let done = false;
   function finish() {
@@ -63,9 +46,49 @@ document.addEventListener('DOMContentLoaded', () => {
     timers.forEach(clearTimeout);
     document.removeEventListener('keydown', finish);
     el.classList.add('out');
-    setTimeout(() => el.remove(), 450);
+    setTimeout(() => el.remove(), 400);
   }
-  at(TOTAL, finish);
+  at(3400, finish);
   el.addEventListener('click', finish);
   document.addEventListener('keydown', finish);
 });
+
+// Counts the number inside el from 0 up to `to` over `ms`, easing out; fmt turns a number into text.
+// Stops if something else writes into el meanwhile, so a fresh value from the app always wins.
+function countTo(el, to, ms, fmt) {
+  const start = performance.now();
+  let mine = null;
+  (function step(now) {
+    if (mine !== null && el.textContent !== mine) return;
+    const p = Math.min(1, (now - start) / ms);
+    mine = el.textContent = fmt(to * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(step);
+  })(start);
+}
+
+// Big numbers (earnings, jobs done) count up the first time the app sets them. Only the digits run;
+// the currency sign and words stay exactly as the app wrote them, and the last frame is the app's text.
+function countUpStats() {
+  const seen = new WeakSet();
+  const run = (b) => {
+    const text = b.textContent;
+    const m = text.match(/\d[\d,]*(\.\d+)?/);
+    const to = m ? Number(m[0].replace(/,/g, '')) : 0;
+    if (!(to > 0) || seen.has(b)) return;
+    seen.add(b);
+    const decimals = m[1] ? m[1].length - 1 : 0;
+    const grouped = m[0].includes(',');
+    b.classList.add('counting');
+    countTo(b, to, 700, (v) => {
+      if (v >= to) return text;
+      const n = grouped ? v.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+                        : v.toFixed(decimals);
+      return text.replace(m[0], n);
+    });
+  };
+  const watch = new MutationObserver((list) => list.forEach((r) => {
+    const b = r.target.nodeType === 1 ? r.target : r.target.parentElement;
+    if (b && b.matches && b.matches('.stats b')) run(b);
+  }));
+  document.querySelectorAll('.stats b').forEach((b) => watch.observe(b, { childList: true, characterData: true, subtree: true }));
+}
