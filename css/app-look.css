@@ -130,9 +130,9 @@
 @keyframes print-slip { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
 .slip-ok {
   display: table; margin: 4px auto 12px; padding: 4px 12px; border: 3px double var(--stamp); border-radius: 10px;
-  color: var(--stamp); transform: rotate(-4deg); animation: stamp-small .4s cubic-bezier(.3, 1.6, .5, 1) .45s both;
+  color: var(--stamp); transform: rotate(-2deg); animation: stamp-small .4s cubic-bezier(.3, 1.6, .5, 1) .45s both;
 }
-@keyframes stamp-small { 0% { transform: rotate(-4deg) scale(2); opacity: 0; } 100% { transform: rotate(-4deg) scale(1); opacity: 1; } }
+@keyframes stamp-small { 0% { transform: rotate(-2deg) scale(2); opacity: 0; } 100% { transform: rotate(-2deg) scale(1); opacity: 1; } }
 @media print { .slip { animation: none; border: 0; -webkit-mask: none; mask: none; } .slip-ok { animation: none; } }
 
 /* ---------- Moments (js/moments.js): a card pops over the screen for 1.5 s, never blocking a tap ---------- */
