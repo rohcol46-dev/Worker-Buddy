@@ -4,7 +4,7 @@
 // So: bump VERSION in every PR that changes an app file. Without a bump, phones get the change one
 // open later, file by file, which can briefly mix old and new files.
 // Map tiles seen before are kept too. Live data (Supabase, weather, places) always goes to the network.
-const VERSION = 'wb-v26';
+const VERSION = 'wb-v27';
 const APP_FILES = [
   './',
   './index.html',
@@ -30,6 +30,7 @@ const APP_FILES = [
   './js/care.js',
   './js/grow.js',
   './js/pages.js',
+  './js/buddy.js',
   './wages/',
   './wages/index.html',
   './dispute/',
