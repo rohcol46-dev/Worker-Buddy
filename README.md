@@ -144,7 +144,7 @@ Workers never pay. Ways to keep it running, to discuss on the pitch slide:
 | Offline | Service worker (`sw.js`) + saved copies in the browser |
 | Maps and nearby places | [Leaflet](https://leafletjs.com), [OpenStreetMap](https://www.openstreetmap.org), Overpass API |
 | Weather | [Open-Meteo](https://open-meteo.com) |
-| Hosting | [Vercel](https://vercel.com) (free) |
+| Hosting | [Vercel](https://vercel.com) (free, `vercel.json`) or [Render](https://render.com) static site (free, `render.yaml`) |
 
 Database tables: `workers`, `employers`, `bookings`, `messages`, `offers`, `rest_points`, `heat_reports`, `materials`, `favorites`, `repeat_jobs`, `crew_members`, `crew_attendance`. Bookings change state only through database functions (`accept_booking`, `start_booking`, `complete_booking`, `pay_booking`, `confirm_payment`, `cancel_booking`, `worker_cancel`, `review_booking`, `make_offer`, `accept_offer`, `start_at_site`, `rain_stop`, `pay_showup`, `decide_material`, `confirm_by_qr`). The SQL is in `supabase/`.
 
@@ -169,6 +169,16 @@ python -m http.server 5500
 ```
 
 Open http://localhost:5500. For the live demo, open `/employer/` on one phone or window and `/worker/` on another.
+
+## Host it on Render
+
+`render.yaml` sets the app up as a Render static site with the same security headers as `vercel.json`. A static site on Render stays awake; only Render's free web services sleep.
+
+1. In the Render dashboard: **New → Blueprint**, pick this repo, and apply. Render reads `render.yaml`, publishes the repo as it is (no build) and gives an address like `https://worker-buddy.onrender.com`.
+2. Add that address to Supabase's redirect URLs (see step 1 under **Switch on Google and mobile number sign-in**), or Google sign-in will not come back to the app.
+3. Every push to `main` deploys again, and each pull request gets its own preview address.
+
+Keep the headers in `render.yaml` and `vercel.json` the same while both are in use.
 
 ## Demo script (3 minutes)
 
@@ -222,7 +232,7 @@ Open http://localhost:5500. For the live demo, open `/employer/` on one phone or
 
 The buttons are built in; they say "not switched on yet" until these are set in the Supabase dashboard.
 
-1. **Authentication → URL Configuration:** Site URL `https://worker-buddy-app.vercel.app`; add redirect URLs `https://worker-buddy-app.vercel.app/**` and `http://localhost:5500/**`.
+1. **Authentication → URL Configuration:** Site URL `https://worker-buddy-app.vercel.app`; add redirect URLs `https://worker-buddy-app.vercel.app/**`, `https://worker-buddy.onrender.com/**` (or whatever address Render gives the site) and `http://localhost:5500/**`. Google sign-in returns to the address the app is on, so every address the app runs on must be in this list.
 2. **Authentication → Sign In / Providers → Allow manual linking:** on (lets a phone's account add Google without losing its profile).
 3. **Google:** in Google Cloud Console make an OAuth client (Web application) with the redirect URI `https://ndvnvalwbtqgutpfsqfa.supabase.co/auth/v1/callback`, then paste its client ID and secret into **Providers → Google** and switch it on. Free.
 4. **Phone:** switch on **Providers → Phone** and fill in an SMS provider (Twilio, MessageBird, Vonage or Textlocal). Real SMS costs money and Indian numbers need DLT registration. For a demo, add test numbers with fixed codes under **Phone → Test phone numbers and OTPs** (for example `919000000001=123456`), so no SMS is sent.
