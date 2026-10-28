@@ -936,8 +936,8 @@ async function onBookingChange(payload) {
     showToast(t('workerCantCome'));
     ring();
   }
-  if (was.status === 'searching' && b.status === 'assigned') ring();
-  if (!was.worker_confirmed_at && b.worker_confirmed_at) ring();
+  if (was.status === 'searching' && b.status === 'assigned') { ring(); moment('accepted', t('momentWorkerComing')); }
+  if (!was.worker_confirmed_at && b.worker_confirmed_at) { ring(); moment('paid', t('momentSlipConfirmed')); }
   renderBooking();
 }
 

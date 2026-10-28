@@ -434,6 +434,7 @@ async function acceptRequest() {
   await loadMessages(W.active.id);
   cacheState();
   renderHome();
+  moment('accepted', t('momentAccepted'));
 }
 
 // ---------- The job I'm doing ----------
@@ -600,6 +601,7 @@ async function startWork() {
   if (r.data === 'locked') return showToast(t('otpLocked'));
   if (r.data !== 'ok') return showToast(t('wrongOtp'));
   showToast(t('checkedIn'));
+  moment('started', t('momentStarted'));
   await refreshActive();
 }
 
@@ -611,6 +613,7 @@ async function completeWork() {
       overtime_hours: extra, paid_amount: W.active.agreed_wage + otRate(W.active) * extra + (W.active.travel_pay || 0) });
   }
   if (r.error || !r.data) return showToast(t('saveError'));
+  moment('done', t('momentDone'));
   await refreshActive();
 }
 
@@ -622,7 +625,9 @@ async function confirmPay(received) {
   cacheState();
   renderActive();
   loadEarnings();
-  if (received) openSlip(W.active, W.employer, W.me);
+  if (!received) return;
+  moment('paid', t('momentPaid'), amountOf(W.active));
+  setTimeout(() => openSlip(W.active, W.employer, W.me), 1300); // the slip prints after the stamp
 }
 
 function sendMyLocation() {
@@ -708,6 +713,7 @@ async function acceptLater(id) {
     return loadLaterJobs();
   }
   showToast(tf('acceptedLater', whenText(data)));
+  moment('accepted', t('momentAccepted'));
   loadLaterJobs();
 }
 
