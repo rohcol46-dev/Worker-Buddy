@@ -14,6 +14,8 @@
   display: inline-grid; grid-template-columns: auto minmax(0, 1fr);
   column-gap: 10px; row-gap: 1px; align-items: center; text-decoration: none;
 }
+/* The app name tag stays as wide as its words, not the whole bar */
+.topbar .brand .app-tag { justify-self: start; }
 .brand-logo {
   grid-row: span 2; width: 38px; height: 38px; border-radius: 12px;
   background: var(--orange-soft); outline: 2px dashed rgba(194, 65, 12, .35); outline-offset: -5px;
