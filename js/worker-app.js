@@ -860,6 +860,7 @@ App.onLang = () => {
   renderSchemes(Store.get('schemeAnswers', null));
   renderOfflineBanner();
   renderHelper();
+  renderBuddyTools();
   renderServicesCard();
   renderSharedPhone();
   renderToolChecks(W.me ? W.me.tools : []);
@@ -939,6 +940,7 @@ async function init() {
   }));
   initSafety();
   renderHelper();
+  renderBuddyTools();
   renderServicesCard();
   renderSharedPhone();
   renderToolChecks([]);
@@ -967,6 +969,7 @@ async function init() {
     show('home');
     W.map = heroMap('heroMap');
     renderHome();
+    renderBuddyTools();
     window.addEventListener('online', () => location.reload(), { once: true });
     return;
   }
@@ -979,6 +982,7 @@ async function init() {
   W.map = heroMap('heroMap');
   await loadActive();
   renderHome();
+  renderBuddyTools();
   listen();
   flushQueue();
   checkOpenRequests();
