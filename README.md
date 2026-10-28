@@ -144,7 +144,7 @@ Workers never pay. Ways to keep it running, to discuss on the pitch slide:
 | Offline | Service worker (`sw.js`) + saved copies in the browser |
 | Maps and nearby places | [Leaflet](https://leafletjs.com), [OpenStreetMap](https://www.openstreetmap.org), Overpass API |
 | Weather | [Open-Meteo](https://open-meteo.com) |
-| Hosting | [Vercel](https://vercel.com) (free) |
+| Hosting | [Vercel](https://vercel.com) (free), live at https://workerbuddy.vercel.app |
 
 Database tables: `workers`, `employers`, `bookings`, `messages`, `offers`, `rest_points`, `heat_reports`, `materials`, `favorites`, `repeat_jobs`, `crew_members`, `crew_attendance`. Bookings change state only through database functions (`accept_booking`, `start_booking`, `complete_booking`, `pay_booking`, `confirm_payment`, `cancel_booking`, `worker_cancel`, `review_booking`, `make_offer`, `accept_offer`, `start_at_site`, `rain_stop`, `pay_showup`, `decide_material`, `confirm_by_qr`). The SQL is in `supabase/`.
 
@@ -222,7 +222,7 @@ Open http://localhost:5500. For the live demo, open `/employer/` on one phone or
 
 The buttons are built in; they say "not switched on yet" until these are set in the Supabase dashboard.
 
-1. **Authentication → URL Configuration:** Site URL `https://worker-buddy-app.vercel.app`; add redirect URLs `https://worker-buddy-app.vercel.app/**` and `http://localhost:5500/**`.
+1. **Authentication → URL Configuration:** Site URL `https://workerbuddy.vercel.app`; add redirect URLs `https://workerbuddy.vercel.app/**`, `https://worker-buddy-app.vercel.app/**` (the old address still works) and `http://localhost:5500/**`.
 2. **Authentication → Sign In / Providers → Allow manual linking:** on (lets a phone's account add Google without losing its profile).
 3. **Google:** in Google Cloud Console make an OAuth client (Web application) with the redirect URI `https://ndvnvalwbtqgutpfsqfa.supabase.co/auth/v1/callback`, then paste its client ID and secret into **Providers → Google** and switch it on. Free.
 4. **Phone:** switch on **Providers → Phone** and fill in an SMS provider (Twilio, MessageBird, Vonage or Textlocal). Real SMS costs money and Indian numbers need DLT registration. For a demo, add test numbers with fixed codes under **Phone → Test phone numbers and OTPs** (for example `919000000001=123456`), so no SMS is sent.
