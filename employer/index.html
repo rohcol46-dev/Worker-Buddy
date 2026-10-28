@@ -3,28 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#E4561B">
+  <meta name="theme-color" content="#F5F3F0">
   <meta name="description" content="Worker Buddy for employers: book a nearby worker at a fair wage in seconds.">
   <title>Worker Buddy · Employer</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../vendor/leaflet-1.9.4/leaflet.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Sans+Tamil:wght@500;700&family=Noto+Sans+Devanagari:wght@500;700&display=swap">
+  <link rel="preload" href="../vendor/fonts/plus-jakarta-sans-v12-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/live.css">
   <link rel="stylesheet" href="../css/theme.css">
+  <link rel="stylesheet" href="../css/app-look.css">
 </head>
 <body data-app="employer" class="live">
   <header class="topbar topbar-employer">
-    <a class="brand" href="../">🏠 Worker Buddy <span class="app-tag" data-t="appEmployer"></span></a>
+    <a class="brand" href="../"><span class="brand-logo" aria-hidden="true">🏠</span><span class="brand-name">Worker Buddy</span><span class="app-tag" data-t="appEmployer">Employer app</span></a>
     <div class="top-actions">
       <button id="installBtn" class="lang-btn" hidden data-t="installApp"></button>
       <button id="accBtn" class="lang-btn acc-btn" type="button" onclick="openAccount()">👤</button>
       <select id="langSelect" class="lang-select" aria-label="Language"></select>
     </div>
   </header>
+  <div class="boot" aria-hidden="true"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
   <div id="offlineBanner" class="offline-banner" hidden></div>
 
   <!-- ================= SIGN UP (first time only) ================= -->
@@ -184,27 +184,28 @@
 
   <div id="toast" class="toast"></div>
 
-  <script src="../vendor/supabase-js-2.45.4/supabase.js"></script>
-  <script src="../vendor/leaflet-1.9.4/leaflet.js"></script>
-  <script src="../vendor/qrcode-generator-1.4.4.js"></script>
-  <script src="../vendor/jsqr-1.4.0.js"></script>
-  <script src="../js/config.js"></script>
-  <script src="../js/report.js"></script>
-  <script src="../js/data.js"></script>
-  <script src="../js/countries.js"></script>
-  <script src="../js/wage.js"></script>
-  <script src="../js/safety.js"></script>
-  <script src="../js/live.js"></script>
-  <script src="../js/features.js"></script>
-  <script src="../js/lang-hi.js"></script>
-  <script src="../js/account.js"></script>
-  <script src="../js/trust.js"></script>
-  <script src="../js/extras.js"></script>
-  <script src="../js/more.js"></script>
-  <script src="../js/deck.js"></script>
-  <script src="../js/fair.js"></script>
-  <script src="../js/care.js"></script>
-  <script src="../js/grow.js"></script>
-  <script src="../js/employer-app.js"></script>
+  <script defer src="../vendor/supabase-js-2.45.4/supabase.js"></script>
+  <script defer src="../vendor/leaflet-1.9.4/leaflet.js"></script>
+  <script defer src="../vendor/qrcode-generator-1.4.4.js"></script>
+  <script defer src="../js/config.js"></script>
+  <script defer src="../js/report.js"></script>
+  <script defer src="../js/data.js"></script>
+  <script defer src="../js/intro.js"></script>
+  <script defer src="../js/moments.js"></script>
+  <script defer src="../js/countries.js"></script>
+  <script defer src="../js/wage.js"></script>
+  <script defer src="../js/safety.js"></script>
+  <script defer src="../js/live.js"></script>
+  <script defer src="../js/features.js"></script>
+  <script defer src="../js/lang-hi.js"></script>
+  <script defer src="../js/account.js"></script>
+  <script defer src="../js/trust.js"></script>
+  <script defer src="../js/extras.js"></script>
+  <script defer src="../js/more.js"></script>
+  <script defer src="../js/deck.js"></script>
+  <script defer src="../js/fair.js"></script>
+  <script defer src="../js/care.js"></script>
+  <script defer src="../js/grow.js"></script>
+  <script defer src="../js/employer-app.js"></script>
 </body>
 </html>

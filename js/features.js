@@ -255,10 +255,12 @@ function registerOffline() {
     navigator.serviceWorker.register(new URL('../sw.js', location.href), { scope: new URL('../', location.href).pathname, updateViaCache: 'none' })
       .then((reg) => reg.update())
       .catch(() => { /* offline support is a bonus; the app still works online */ });
-    // A new version took over: reload once so every screen uses it (not the old saved copy)
+    // A new version took over: reload so every screen uses it (not the old saved copy).
+    // Once per release, not once per tab: a phone that keeps the app open gets later releases too.
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (hadOld && !sessionStorage.getItem('wb_reloaded')) {
-        sessionStorage.setItem('wb_reloaded', '1');
+      const last = Number(sessionStorage.getItem('wb_reloaded')) || 0;
+      if (hadOld && Date.now() - last > 30000) {
+        sessionStorage.setItem('wb_reloaded', String(Date.now()));
         location.reload();
       }
     });

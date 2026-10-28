@@ -1,0 +1,176 @@
+/* app-look.css — Worker Buddy's own signature, built on the pay slip: the thing a worker keeps.
+   Slips have a torn edge, "paid" gets a green rubber stamp, and money counts up when it appears.
+   Uses theme.css colours only (navy, saffron, paid green); loaded last, it only adds to theme.css.
+   Take the <link> out to drop it. Motion is transform/opacity only and stops for reduced motion. */
+
+:root {
+  --tear: 10px;   /* size of one tooth on a torn slip edge */
+  --stamp: #15803D;
+  --paper: #FFFDF8;
+}
+
+/* ---------- Brand: the emoji sits in a soft saffron tile with a dotted "slip" edge ---------- */
+.topbar .brand, .brand {
+  display: inline-grid; grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px; row-gap: 1px; align-items: center; text-decoration: none;
+}
+/* The app name tag stays as wide as its words, not the whole bar */
+.topbar .brand .app-tag { justify-self: start; }
+.brand-logo {
+  grid-row: span 2; width: 38px; height: 38px; border-radius: 12px;
+  background: var(--orange-soft); outline: 2px dashed rgba(194, 65, 12, .35); outline-offset: -5px;
+  display: grid; place-items: center; font-size: 1.15rem; line-height: 1;
+}
+
+/* ---------- Torn slip edge: the bottom of the landing hero and the pay slips ---------- */
+.landing .hero, .slip, .payslip {
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - var(--tear)) no-repeat,
+                conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--tear) * 2) var(--tear) repeat-x;
+          mask: linear-gradient(#000 0 0) top / 100% calc(100% - var(--tear)) no-repeat,
+                conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--tear) * 2) var(--tear) repeat-x;
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+}
+.landing .hero { padding-bottom: calc(30px + var(--tear)); }
+/* A dashed "cut here" line across the hero, like the perforation on a slip book */
+.landing .hero::before {
+  content: ""; position: absolute; left: 22px; right: 22px; bottom: calc(var(--tear) + 12px);
+  border-top: 2px dashed rgba(255, 255, 255, .22); pointer-events: none;
+}
+
+/* ---------- PAID stamp: any element with .stamp-paid, and the confirmed pay slip ---------- */
+.stamp-paid {
+  display: inline-grid; place-items: center; padding: 6px 12px; border: 3px double var(--stamp); border-radius: 10px;
+  color: var(--stamp); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .85rem;
+  transform: rotate(-8deg); animation: stamp .45s cubic-bezier(.3, 1.6, .5, 1) both;
+}
+@keyframes stamp {
+  0% { transform: rotate(-8deg) scale(2.4); opacity: 0; }
+  60% { transform: rotate(-8deg) scale(.92); opacity: 1; }
+  100% { transform: rotate(-8deg) scale(1); }
+}
+
+/* ---------- Stats: the first tile is today's slip, with a saffron tab on top ---------- */
+.stats div { position: relative; overflow: hidden; }
+#dutyBlock .stats div:first-child { background: var(--paper); }
+#dutyBlock .stats div:first-child::after {
+  content: ""; position: absolute; left: 16px; right: 16px; top: 0; height: 4px; border-radius: 0 0 4px 4px; background: var(--orange-2);
+}
+.counting { font-variant-numeric: tabular-nums; }
+
+/* ---------- Tab bar: the open tab gets a saffron bar that grows under it, and its icon hops ---------- */
+.bottom-nav button { position: relative; }
+.bottom-nav button::after {
+  content: ""; position: absolute; left: 30%; right: 30%; bottom: 3px; height: 3px; border-radius: 3px;
+  background: var(--orange-2); transform: scaleX(0); transition: transform .25s var(--ease-out, ease-out);
+}
+.bottom-nav button.active::after { transform: scaleX(1); }
+.bottom-nav button.active span { animation: hop .4s var(--ease-out, ease-out); }
+@keyframes hop { 40% { transform: translateY(-5px); } 100% { transform: none; } }
+
+/* ---------- Screens: a new screen slides in from the side like a page in a slip book,
+   and its cards follow one after another ---------- */
+.screen.active { animation: page-in .3s var(--ease-out, ease-out); }
+@keyframes page-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.landing > *, .sheet > *, .screen.active > .card { animation: deal .4s var(--ease-out, ease-out) both; }
+.landing > :nth-child(2), .sheet > :nth-child(2) { animation-delay: .04s; }
+.landing > :nth-child(3), .sheet > :nth-child(3) { animation-delay: .08s; }
+.landing > :nth-child(4), .sheet > :nth-child(4) { animation-delay: .12s; }
+.landing > :nth-child(n+5), .sheet > :nth-child(n+5) { animation-delay: .16s; }
+@keyframes deal { from { opacity: 0; transform: translateY(10px) rotate(-.6deg); } to { opacity: 1; transform: none; } }
+
+/* App cards on the landing page tilt a little toward the thumb, like picking up a card */
+.app-card { transition: transform .2s var(--ease-out, ease-out), box-shadow .2s ease; }
+@media (hover: hover) { .app-card:hover { transform: translateY(-3px) rotate(-.5deg); } }
+
+/* ---------- Opening animation (js/intro.js): a pay slip prints, gets stamped PAID, then folds into the logo ---------- */
+.intro {
+  position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; cursor: pointer;
+  background: var(--bg); color: var(--navy); text-align: center;
+  transition: opacity .4s ease;
+}
+.intro.out { opacity: 0; pointer-events: none; }
+.intro-slip {
+  position: relative; width: min(300px, 78vw); padding: 20px 20px calc(58px + var(--tear)); text-align: left;
+  background: var(--paper); border-radius: 16px 16px 0 0; box-shadow: var(--shadow-md);
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - var(--tear)) no-repeat,
+                conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--tear) * 2) var(--tear) repeat-x;
+          mask: linear-gradient(#000 0 0) top / 100% calc(100% - var(--tear)) no-repeat,
+                conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--tear) * 2) var(--tear) repeat-x;
+  clip-path: inset(0 0 100% 0); animation: print .7s steps(14) .1s forwards;
+}
+@keyframes print { to { clip-path: inset(0 0 0 0); } }
+.intro-slip h2 { margin: 0 0 12px; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--orange); }
+.intro-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-weight: 600; }
+.intro-row b { font-variant-numeric: tabular-nums; }
+.intro-row.total { border: 0; font-size: 1.25rem; font-weight: 800; }
+.intro-row.total b { color: var(--navy); }
+.intro-stampbox { position: absolute; right: 18px; bottom: calc(var(--tear) + 12px); pointer-events: none; }
+.intro-stampbox .stamp-paid { visibility: hidden; animation: none; font-size: 1rem; background: rgba(255, 253, 248, .85); }
+.intro.stamped .intro-stampbox .stamp-paid { visibility: visible; animation: stamp .45s cubic-bezier(.3, 1.6, .5, 1) both; }
+.intro.fold .intro-slip { transition: transform .45s cubic-bezier(.6, 0, .4, 1), opacity .45s ease; transform: scale(.14) rotate(-10deg); opacity: 0; }
+.intro-brand { position: absolute; display: grid; justify-items: center; gap: 10px; opacity: 0; transform: scale(.9); transition: opacity .35s ease, transform .45s cubic-bezier(.3, 1.4, .5, 1); }
+.intro.fold .intro-brand { opacity: 1; transform: none; transition-delay: .3s; }
+.intro-brand .brand-logo { width: 72px; height: 72px; border-radius: 22px; font-size: 2.2rem; outline-offset: -8px; }
+.intro-brand h1 { margin: 0; font-size: clamp(1.8rem, 8vw, 2.4rem); color: var(--navy); }
+.intro-brand p { margin: 0; color: var(--muted); font-weight: 600; max-width: 22em; padding: 0 16px; }
+.intro-skip {
+  position: absolute; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
+  background: none; border: 0; color: var(--muted); font: inherit; font-size: .85rem; font-weight: 700; min-height: 44px; padding: 0 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro { display: none; }
+}
+
+/* ---------- Pay slips in popups: paper with a torn edge; they print from the top when opened,
+   and "confirmed" is a stamp ---------- */
+.slip {
+  background: var(--paper); border: 1px solid var(--line); border-bottom: 0; border-radius: 14px 14px 0 0;
+  padding: 14px 14px calc(14px + var(--tear));
+  animation: print-slip .55s steps(11) both;
+}
+@keyframes print-slip { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+.slip-ok {
+  display: table; margin: 4px auto 12px; padding: 4px 12px; border: 3px double var(--stamp); border-radius: 10px;
+  color: var(--stamp); transform: rotate(-2deg); animation: stamp-small .4s cubic-bezier(.3, 1.6, .5, 1) .45s both;
+}
+@keyframes stamp-small { 0% { transform: rotate(-2deg) scale(2); opacity: 0; } 100% { transform: rotate(-2deg) scale(1); opacity: 1; } }
+@media print { .slip { animation: none; border: 0; -webkit-mask: none; mask: none; } .slip-ok { animation: none; } }
+
+/* ---------- Moments (js/moments.js): a card pops over the screen for 1.5 s, never blocking a tap ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
+.moment {
+  position: fixed; inset: 0; z-index: 3000; display: grid; place-items: center; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(14, 26, 54, .28), transparent); transition: opacity .35s ease;
+}
+.moment.out { opacity: 0; }
+.moment-card {
+  position: relative; display: grid; justify-items: center; gap: 10px; min-width: 200px; padding: 22px 24px 18px;
+  background: var(--paper); border-radius: 22px; box-shadow: var(--shadow-pop);
+  animation: moment-in .45s cubic-bezier(.3, 1.5, .5, 1) both;
+}
+@keyframes moment-in { from { transform: scale(.6) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.moment-card p { margin: 0; font-weight: 800; color: var(--navy); font-size: 1.1rem; text-align: center; max-width: 16em; }
+.moment-icon { position: relative; width: 76px; height: 76px; display: grid; place-items: center; }
+.moment-icon svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.moment-icon circle {
+  fill: var(--orange-soft); stroke: var(--orange-2); stroke-width: 3; stroke-linecap: round;
+  stroke-dasharray: 126; stroke-dashoffset: 126; animation: ring-draw .6s ease-out .15s forwards;
+}
+.moment-done .moment-icon circle { fill: var(--green-soft); stroke: var(--green); }
+@keyframes ring-draw { to { stroke-dashoffset: 0; } }
+.moment-icon em { font-style: normal; font-size: 2.1rem; animation: hop .5s var(--ease-out, ease-out) .35s both; }
+.moment-accepted .moment-icon em { animation: shake-hands .6s ease-in-out .3s 2 both; }
+@keyframes shake-hands { 25% { transform: translateY(-3px) rotate(-6deg); } 75% { transform: translateY(3px) rotate(6deg); } }
+.moment-paid .stamp-paid { font-size: 1.5rem; padding: 8px 18px; animation-delay: .1s; }
+.moment-amount { font-size: 2rem; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.coin {
+  position: absolute; left: 50%; top: 42%; width: 14px; height: 14px; margin: -7px; border-radius: 50%;
+  background: #F2B33D; box-shadow: inset 0 0 0 2px #D9932A; opacity: 0;
+  animation: coin-jump .8s cubic-bezier(.2, .7, .3, 1) .25s forwards;
+}
+@keyframes coin-jump {
+  0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(.6); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(1); }
+}

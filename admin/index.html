@@ -5,21 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <meta name="theme-color" content="#0E1A36">
-  <title>Reports · Worker Buddy</title>
+  <title>Admin · Worker Buddy</title>
   <link rel="icon" href="../icon.svg" type="image/svg+xml">
+  <link rel="preload" href="../vendor/fonts/plus-jakarta-sans-v12-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/theme.css">
+  <link rel="stylesheet" href="../css/app-look.css">
   <style>
     .admin { max-width: 900px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
     .report { display: flex; flex-direction: column; gap: 6px; }
     .report .meta { color: #5b6170; font-size: .85rem; }
     .report .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .trial table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    .trial th, .trial td { padding: 6px 4px; border-bottom: 1px solid #E1E4EA; text-align: right; white-space: nowrap; }
+    .trial th:first-child, .trial td:first-child { text-align: left; }
+    .trial .scroll { overflow-x: auto; }
+    .trial .bar { font-weight: 700; }
     .tag { display: inline-block; padding: 2px 8px; border-radius: 99px; background: #FDE2DD; color: #8E1D0B; font-size: .8rem; font-weight: 700; }
   </style>
 </head>
 <body data-app="landing">
   <header class="topbar">
-    <a class="brand" href="../">🛡️ Worker Buddy reports</a>
+    <a class="brand" href="../"><span class="brand-logo" aria-hidden="true">🛡️</span><span class="brand-name">Worker Buddy reports</span></a>
     <select id="statusSelect" class="lang-select" aria-label="Which reports">
       <option value="open">Open</option>
       <option value="closed">Closed</option>
@@ -27,6 +34,7 @@
     </select>
   </header>
   <main class="admin">
+    <section id="trial" class="card trial" hidden></section>
     <p id="note" class="muted">Loading…</p>
     <div id="list"></div>
   </main>
@@ -96,6 +104,41 @@
         actions);
     }
 
+    // Trial numbers (supabase/032): confirmed-paid jobs per week, repeat hires, active people.
+    // The Chennai trial bar: 40+ confirmed-paid jobs in 4 weeks, 30%+ repeat hires, 15+ active workers.
+    async function loadTrial() {
+      const box = document.getElementById('trial');
+      box.hidden = false;
+      box.replaceChildren(el('p', { className: 'muted' }, 'Loading trial numbers…'));
+      const { data, error } = await db.rpc('admin_trial_numbers', { p_weeks: 8 });
+      if (error) { box.replaceChildren(el('p', { className: 'muted' }, `Trial numbers: ${error.message}`)); return; }
+      const last4 = data.slice(1, 5);   // the 4 most recent full weeks (this week is still running)
+      const paid4 = last4.reduce((s, r) => s + Number(r.paid_jobs), 0);
+      const repeat4 = last4.reduce((s, r) => s + Number(r.repeat_jobs), 0);
+      const workers4 = last4.length ? Number(last4[0].workers_4w) : 0;
+      const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '–');
+      const tick = (ok) => (ok ? '✅' : '⏳');
+      const head = ['Week of', 'Posted', 'Paid jobs', 'Repeat hires', 'Same worker again', 'Active workers', 'Workers in 4 weeks', 'Active employers', 'New workers', 'New employers', 'Paid (₹)'];
+      const rows = data.map((r) => el('tr', null,
+        el('td', null, new Date(r.week_start + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })),
+        el('td', null, r.posted_jobs), el('td', null, el('b', null, r.paid_jobs)),
+        el('td', null, `${r.repeat_jobs} (${pct(Number(r.repeat_jobs), Number(r.paid_jobs))})`),
+        el('td', null, r.rehired_jobs), el('td', null, r.active_workers), el('td', null, r.workers_4w),
+        el('td', null, r.active_employers),
+        el('td', null, r.new_workers), el('td', null, r.new_employers),
+        el('td', null, Number(r.paid_amount).toLocaleString('en-IN'))));
+      box.replaceChildren(
+        el('h3', null, '📈 Trial numbers'),
+        el('p', { className: 'bar' },
+          `Last 4 full weeks: ${tick(paid4 >= 40)} ${paid4} confirmed-paid jobs (bar 40) · `,
+          `${tick(paid4 && repeat4 / paid4 >= 0.3)} ${pct(repeat4, paid4)} repeat hires (bar 30%) · `,
+          `${tick(workers4 >= 15)} ${workers4} workers paid (bar 15)`),
+        el('div', { className: 'scroll' }, el('table', null,
+          el('thead', null, el('tr', null, head.map((h) => el('th', null, h)))),
+          el('tbody', null, rows))),
+        el('p', { className: 'muted small' }, 'Paid jobs = the worker confirmed the pay. Repeat hire = the employer already had a confirmed-paid job before. Sample workers are left out. Weeks start on Monday (India time).'));
+    }
+
     async function load() {
       const note = document.getElementById('note');
       const list = document.getElementById('list');
@@ -105,6 +148,7 @@
         list.replaceChildren();
         return;
       }
+      if (document.getElementById('trial').hidden) loadTrial();
       const s = document.getElementById('statusSelect').value;
       const { data, error } = await db.rpc('admin_reports', { p_status: s || null });
       if (error) { note.textContent = error.message; return; }
