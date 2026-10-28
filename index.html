@@ -15,6 +15,7 @@
     // The page has English built in; for Tamil or Hindi, keep it hidden until that language is filled in
     try { if ((JSON.parse(localStorage.getItem('wb_lang')) || 'en') !== 'en') document.documentElement.classList.add('t-wait'); } catch (e) { /* storage blocked */ }
   </script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body data-app="landing">
   <header class="topbar">
