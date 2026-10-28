@@ -1,8 +1,10 @@
-// sw.js — lets both apps open without internet.
-// App files come from the network when online (so a new version shows at once) and from the
-// phone when offline; map tiles seen before are kept too.
-// Live data (Supabase, weather, places) always goes to the network.
-const VERSION = 'wb-v25';
+// sw.js — lets both apps open at once, even with a weak signal or no internet.
+// App files come from the phone straight away and are refreshed from the network in the background.
+// A new release (a new VERSION) is fetched whole on install; the page then reloads once (features.js).
+// So: bump VERSION in every PR that changes an app file. Without a bump, phones get the change one
+// open later, file by file, which can briefly mix old and new files.
+// Map tiles seen before are kept too. Live data (Supabase, weather, places) always goes to the network.
+const VERSION = 'wb-v26';
 const APP_FILES = [
   './',
   './index.html',
@@ -48,7 +50,8 @@ const APP_FILES = [
   './vendor/leaflet-1.9.4/leaflet.js',
   './vendor/supabase-js-2.45.4/supabase.js',
   './vendor/qrcode-generator-1.4.4.js',
-  './vendor/jsqr-1.4.0.js'
+  './vendor/jsqr-1.4.0.js',
+  './vendor/fonts/plus-jakarta-sans-v12-latin.woff2'
 ];
 const TILE_LIMIT = 300;
 
@@ -89,22 +92,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // App files: the network first (new versions show at once), the saved copy when offline or slow
+  // App files: the saved copy at once (no waiting on a weak signal), refreshed in the background
+  // for next time. Nothing saved yet: wait for the network, as a normal page would.
   const isAppFile = url.origin === self.location.origin || APP_FILES.includes(req.url);
   if (!isAppFile) return; // live data goes to the network as normal
   event.respondWith(
     caches.open(VERSION).then(async (cache) => {
-      const saved = () => cache.match(req, { ignoreSearch: true });
-      try {
-        const res = await Promise.race([
-          fetch(req, { cache: 'no-cache' }),
-          new Promise((_, no) => setTimeout(() => no(new Error('slow')), 5000))
-        ]);
-        if (res.ok) cache.put(req, res.clone());
-        return res;
-      } catch (e) {
-        return (await saved()) || Response.error();
+      const saved = await cache.match(req, { ignoreSearch: true });
+      const fresh = fetch(req, { cache: 'no-cache' })
+        .then((res) => {
+          // saved without ?query, so job links (worker/?job=…) don't pile up copies of the page
+          if (res.ok && res.type === 'basic') cache.put(url.origin + url.pathname, res.clone());
+          return res;
+        });
+      if (saved) {
+        event.waitUntil(fresh.catch(() => {}));
+        return saved;
       }
+      return fresh.catch(() => Response.error());
     })
   );
 });

@@ -30,8 +30,19 @@
   --ring: 0 0 0 4px rgba(238, 90, 31, .22);
 }
 
+/* Plus Jakarta Sans is self-hosted (latin letters only, 27 KB, cached for a year). Tamil and Hindi use the
+   phone's own fonts, which every Android, iPhone and Windows PC already has, so nothing extra downloads. */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 500 800;
+  font-display: swap;
+  src: url("../vendor/fonts/plus-jakarta-sans-v12-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 html, body {
-  font-family: "Plus Jakarta Sans", "Noto Sans Tamil", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Tamil", "Noto Sans Devanagari", "Nirmala UI", Arial, sans-serif;
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
@@ -41,7 +52,7 @@ body {
     radial-gradient(900px 380px at 100% -80px, rgba(255, 138, 61, .16), transparent 60%),
     radial-gradient(700px 320px at -10% 0, rgba(36, 54, 106, .08), transparent 60%),
     var(--bg);
-  background-attachment: fixed;
+  background-repeat: no-repeat; /* scrolls with the page: a fixed background repaints on every scroll on low-end phones */
 }
 ::selection { background: rgba(238, 90, 31, .22); }
 
@@ -119,7 +130,7 @@ body[data-app="employer"] .app-tag { background: rgba(43, 194, 122, .18); color:
 .btn-light { background: #fff; color: var(--navy); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
 .btn-light:hover { border-color: #D9D2C6; background: #FFFCF8; }
 .btn-big { min-height: 56px; font-size: 1.08rem; border-radius: 16px; }
-.btn-small { min-height: 36px; border-radius: 10px; }
+.btn-small { min-height: 40px; border-radius: 10px; }
 .link-btn { color: var(--orange); font-weight: 700; text-decoration: none; }
 .link-btn:hover { text-decoration: underline; }
 
@@ -180,7 +191,8 @@ form.row { align-items: stretch; margin-bottom: 8px; }
 /* ---------- Chips, tags, badges ---------- */
 .chip {
   border: 1.5px solid var(--line); background: #fff; color: var(--navy);
-  padding: 8px 14px; transition: all .15s ease;
+  min-height: 44px; display: inline-flex; align-items: center; gap: 6px; /* a thumb-sized target */
+  padding: 8px 14px; transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .12s ease;
 }
 .chip:hover { border-color: #DCCFBF; }
 .chip.active { background: var(--grad-ink); border-color: transparent; color: #fff; box-shadow: 0 6px 14px rgba(14, 26, 54, .2); }
@@ -205,12 +217,15 @@ form.row { align-items: stretch; margin-bottom: 8px; }
   background: var(--grad-green); box-shadow: var(--shadow-green);
   transition: transform .12s ease, box-shadow .2s ease;
 }
-.duty-btn:not(.is-online) { animation: glow 2.4s ease-in-out infinite; }
-.duty-btn:active { transform: scale(.985); }
+.duty-btn:not(.is-online)::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 6px rgba(35, 179, 110, .45);
+  animation: glow 2.4s ease-out infinite;
+}
 .duty-btn.is-online { background: var(--grad-ink); box-shadow: 0 10px 22px rgba(14, 26, 54, .22); }
 @keyframes glow {
-  0%, 100% { box-shadow: var(--shadow-green), 0 0 0 0 rgba(35, 179, 110, .45); }
-  50% { box-shadow: var(--shadow-green), 0 0 0 10px rgba(35, 179, 110, 0); }
+  0% { transform: scale(.96); opacity: 1; }
+  70%, 100% { transform: scale(1.06); opacity: 0; }
 }
 
 .stats div {
@@ -254,7 +269,7 @@ form.row { align-items: stretch; margin-bottom: 8px; }
 .type-btn:hover { transform: translateY(-1px); }
 .type-btn.active { border-color: var(--orange); background: linear-gradient(180deg, #FFF6F0, #FFE9DC); box-shadow: 0 8px 18px rgba(238, 90, 31, .18); }
 .segmented { background: #F1EDE6; border: 0; border-radius: 14px; padding: 4px; gap: 4px; }
-.segmented button { background: transparent; border-radius: 10px; color: #4A5470; transition: all .15s ease; }
+.segmented button { background: transparent; border-radius: 10px; color: #4A5470; transition: background-color .15s ease, color .15s ease, box-shadow .15s ease, transform .12s ease; }
 .segmented button.active { background: #fff; color: var(--navy); box-shadow: 0 2px 8px rgba(14, 26, 54, .12); }
 .stepper-input { border: 1.5px solid var(--line); border-radius: 14px; background: #FBFAF7; }
 .stepper-input button { color: var(--orange); font-weight: 800; }
@@ -296,8 +311,8 @@ main { padding-bottom: 112px; }
 .mic-btn.listening { background: var(--grad-green); }
 
 /* ---------- Popups ---------- */
-.modal { background: rgba(10, 16, 32, .5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
-.modal-box { border-radius: 24px; padding: 20px; box-shadow: 0 24px 60px rgba(10, 16, 32, .35); animation: pop .18s ease-out; }
+.modal { background: rgba(10, 16, 32, .55); } /* no full-screen blur: too slow on low-end phones */
+.modal-box { border-radius: 24px; padding: 20px; box-shadow: 0 24px 60px rgba(10, 16, 32, .35); }
 @keyframes pop { from { transform: translateY(10px) scale(.98); } to { transform: none; } } /* no fade: always readable */
 .request-modal .modal-box { border-radius: 28px 28px 0 0; }
 .star { transition: transform .12s ease, color .12s ease; }
@@ -311,6 +326,98 @@ main { padding-bottom: 112px; }
   .hero h1 { font-size: 2.3rem; }
   .landing { padding-top: 28px; }
 }
+
+/* ---------- Motion, touch and type ----------
+   Ideas from Apple's Human Interface Guidelines and the ride and delivery apps people already use:
+   short motion that starts fast and settles (only transform and opacity, so cheap phones keep up),
+   a visible press on everything tappable, 44px touch targets, grey placeholders while loading,
+   and type that keeps Tamil and Hindi letters whole. */
+:root {
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --t-fast: .12s;
+  --t-base: .22s;
+}
+
+/* Screens slide in a little, like a page being pushed */
+.screen.active { animation: screen-in var(--t-base) var(--ease-out); }
+@keyframes screen-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Popups: the dark layer fades in, the box rises; the worker's job request comes up as a sheet */
+.modal.open { animation: dim var(--t-base) ease-out; }
+@keyframes dim { from { background-color: rgba(10, 16, 32, 0); } }
+.modal-box { animation: pop var(--t-base) var(--ease-out); } /* pop: see Popups above */
+.request-modal .modal-box { animation: sheet-up .3s var(--ease-out); }
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+.toast { transform: translate(-50%, 12px); transition: opacity var(--t-base) ease, transform var(--t-base) var(--ease-out); }
+.toast.show { transform: translate(-50%, 0); }
+
+/* Every tap shows at once: a slight press-in, no 300 ms wait */
+button, a, select, label, .chip, .type-btn, .app-card, .mini-card[onclick] { touch-action: manipulation; }
+.chip:active, .type-btn:active, .segmented button:active, .bottom-nav button:active, .icon-btn:active,
+.link-btn:active, .star:active, .lang-select:active, .lang-btn:active { transform: scale(.95); }
+.app-card:active, .duty-btn:active { transform: scale(.98); }
+.bottom-nav button, .lang-btn { transition: transform var(--t-fast) ease, background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease; }
+
+/* Touch targets: 44px, the size Apple and Google both recommend for a thumb */
+.lang-select, .lang-btn { min-height: 40px; }
+.bottom-nav button { min-height: 52px; }
+
+/* A clear focus ring for keyboard and switch users, on everything */
+a:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid var(--orange); outline-offset: 2px;
+}
+.topbar a:focus-visible, .topbar button:focus-visible, .topbar select:focus-visible { outline-color: #FFD3B8; }
+
+/* Numbers that change (money, timers) keep the same width, so they don't jiggle */
+.stats b, .wage-total, .slip-amount, .request-pay, .big-timer b, .pay-chip, .wage-line b { font-variant-numeric: tabular-nums; }
+
+/* Long words wrap instead of running off a small screen */
+h1, h2, h3, .card, .modal-box, .mini-card { overflow-wrap: break-word; }
+
+/* Tamil and Hindi: letter-spacing breaks joined letters and capitals don't exist, so both are off;
+   extra line height keeps vowel signs above and below the line from touching */
+html:lang(ta) *, html:lang(hi) * { letter-spacing: 0 !important; text-transform: none !important; }
+html:lang(ta) .otp-input, html:lang(hi) .otp-input { letter-spacing: .6em !important; } /* digits, not words */
+html:lang(ta) .otp-show b, html:lang(hi) .otp-show b { letter-spacing: .25em !important; }
+html:lang(ta) .otp-mini b, html:lang(hi) .otp-mini b { letter-spacing: 2px !important; }
+html:lang(ta) body { line-height: 1.55; }
+html:lang(hi) body { line-height: 1.5; }
+html:lang(ta) .hero h1 { font-size: 1.6rem; line-height: 1.3; }
+html:lang(ta) .duty-btn, html:lang(ta) .btn-big { font-size: 1.08rem; }
+
+/* Top bar: the name stays on one line, the app name sits under it; actions stay compact */
+.topbar { gap: 10px; }
+.topbar .brand { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; white-space: nowrap; min-width: 0; flex: 1 1 auto; line-height: 1.2; }
+.topbar .brand .app-tag { margin-left: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.brand-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.top-actions { flex: none; }
+@media (max-width: 400px) {
+  .topbar .brand { font-size: 1rem; }
+  .lang-select, .lang-btn { padding: 6px 10px; font-size: .9rem; }
+  .top-actions { gap: 6px; }
+}
+
+/* Links inside the app: brand orange, dark enough to read on white (4.5:1) */
+a { color: #B93E0E; text-underline-offset: 3px; }
+.acc-cc { flex: 0 0 auto !important; align-self: center; font-weight: 700; color: var(--navy); }
+
+/* Grey placeholders while the app starts, instead of a blank page */
+@keyframes breathe { from { opacity: 1; } to { opacity: .45; } }
+[data-t]:empty::before {
+  content: ""; display: inline-block; vertical-align: middle; width: 9em; max-width: 100%; height: .9em; border-radius: 6px;
+  background: rgba(150, 140, 125, .22); animation: breathe .9s ease-in-out infinite alternate;
+}
+.skeleton {
+  border-radius: var(--radius); min-height: 76px; margin-bottom: 12px;
+  background: #EDE8E0; animation: breathe .9s ease-in-out infinite alternate;
+}
+/* Landing page in Tamil or Hindi: hide the built-in English until the chosen language is in */
+.t-wait [data-t] { visibility: hidden; }
+/* Before the app has picked a screen, show the outline of a page */
+.boot { display: none; }
+body.live:not(:has(.screen.active)) .boot { display: block; }
+.boot { position: fixed; top: 64px; left: 0; right: 0; max-width: 560px; margin: 0 auto; padding: 16px; pointer-events: none; } /* fixed: nothing jumps when it goes */
+.boot .skeleton:first-child { min-height: 180px; border-radius: 24px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

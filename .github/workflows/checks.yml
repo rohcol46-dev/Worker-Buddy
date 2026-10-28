@@ -37,3 +37,22 @@ jobs:
           node-version: 20
       - run: for f in js/*.js sw.js; do node --check "$f"; done
       - run: node tests/countries.test.js
+
+  service-worker:
+    name: Service worker version
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: A change to app files needs a new VERSION in sw.js
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          changed=$(git diff --name-only "origin/$BASE_REF...HEAD" -- '*.html' css js vendor | grep -v '^admin/' || true)
+          if [ -n "$changed" ] && ! git diff "origin/$BASE_REF...HEAD" -- sw.js | grep -q '^+const VERSION'; then
+            echo "These app files changed:"; echo "$changed"
+            echo "Bump VERSION in sw.js so phones fetch the new release in one go."
+            exit 1
+          fi

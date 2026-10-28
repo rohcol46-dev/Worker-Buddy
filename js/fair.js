@@ -207,6 +207,19 @@ async function showPayQR(b, amount) {
   m.classList.add('open');
 }
 
+// The QR reader (53 KB) is only fetched the first time someone scans, so the apps open faster
+const Loading = {};
+function loadScript(src) {
+  Loading[src] = Loading[src] || new Promise((ok, no) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = ok;
+    s.onerror = () => { delete Loading[src]; s.remove(); no(new Error('load')); };
+    document.head.appendChild(s);
+  });
+  return Loading[src];
+}
+
 // Worker: scan the employer's QR with the camera (jsQR reads each frame)
 const Scan = { stream: null, timer: null };
 async function scanPayQR(onText) {
@@ -222,12 +235,27 @@ async function scanPayQR(onText) {
     </form>`;
   m.classList.add('open');
   Scan.onText = onText;
-  if (!navigator.mediaDevices || typeof jsQR !== 'function') return showToast(t('qrNoCamera'));
+  const ticket = Scan.ticket = {};
+  // Closed, typed in, or a new scan started while we were waiting: leave the camera off
+  const stillWanted = () => Scan.ticket === ticket && Scan.onText === onText && m.classList.contains('open');
+  if (!navigator.mediaDevices) return showToast(t('qrNoCamera'));
+  if (typeof jsQR !== 'function') {
+    try {
+      await loadScript(new URL('../vendor/jsqr-1.4.0.js', location.href).href);
+    } catch (e) {
+      if (stillWanted()) showToast(t(navigator.onLine ? 'qrNoCamera' : 'offlineBanner'));
+      return;
+    }
+  }
+  if (!stillWanted()) return;
+  let stream;
   try {
-    Scan.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
   } catch (e) {
     return showToast(t('qrNoCamera'));
   }
+  if (!stillWanted()) { stream.getTracks().forEach((tr) => tr.stop()); return; }
+  Scan.stream = stream;
   const video = document.getElementById('qrVideo');
   video.srcObject = Scan.stream;
   await video.play();
@@ -248,6 +276,7 @@ async function scanPayQR(onText) {
 }
 
 function stopScan() {
+  Scan.ticket = null; // a camera still being started is turned off when it arrives
   clearInterval(Scan.timer);
   if (Scan.stream) Scan.stream.getTracks().forEach((tr) => tr.stop());
   Scan.stream = null;
