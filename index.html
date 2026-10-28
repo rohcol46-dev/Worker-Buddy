@@ -10,6 +10,7 @@
   <link rel="preload" href="vendor/fonts/plus-jakarta-sans-v12-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/app-look.css">
   <script>
     // The page has English built in; for Tamil or Hindi, keep it hidden until that language is filled in
     try { if ((JSON.parse(localStorage.getItem('wb_lang')) || 'en') !== 'en') document.documentElement.classList.add('t-wait'); } catch (e) { /* storage blocked */ }
@@ -17,7 +18,7 @@
 </head>
 <body data-app="landing">
   <header class="topbar">
-    <span class="brand">🤝 Worker Buddy</span>
+    <span class="brand"><span class="brand-logo" aria-hidden="true">🤝</span><span class="brand-name">Worker Buddy</span></span>
     <select id="langSelect" class="lang-select" aria-label="Language"></select>
   </header>
 
@@ -64,6 +65,7 @@
   </main>
 
   <script defer src="js/data.js"></script>
+  <script defer src="js/intro.js"></script>
   <script defer src="js/countries.js"></script>
   <script defer src="js/lang-hi.js"></script>
   <script>
