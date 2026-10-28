@@ -31,9 +31,10 @@ function ensureConsent() {
     m.className = 'modal open';
     m.setAttribute('role', 'dialog');
     m.setAttribute('aria-modal', 'true');
+    m.setAttribute('aria-labelledby', 'consentTitle');
     const draw = () => {
       m.innerHTML = `<div class="modal-box consent-box">
-        <h3>🔐 ${t('consentTitle')} ${speakButton(t('consentSpeech'))}</h3>
+        <h3 id="consentTitle">🔐 ${t('consentTitle')} ${speakButton(t('consentSpeech'))}</h3>
         <ul class="consent-list">${['consent1', 'consent2', 'consent3', 'consent4', 'consent5'].map((k) => `<li>${t(k)}</li>`).join('')}</ul>
         <p class="small"><a href="../privacy/" target="_blank" rel="noopener">${t('privacyRead')}</a></p>
         <button type="button" class="btn btn-accept btn-block btn-big" id="consentYes">${t('consentAgree')}</button>

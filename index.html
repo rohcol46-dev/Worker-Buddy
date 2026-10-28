@@ -7,11 +7,13 @@
   <meta name="description" content="Worker Buddy: fair pay, safe work and direct jobs for daily-wage workers.">
   <title>Worker Buddy</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Noto+Sans+Tamil:wght@500;700&family=Noto+Sans+Devanagari:wght@500;700&display=swap">
+  <link rel="preload" href="vendor/fonts/plus-jakarta-sans-v12-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/theme.css">
+  <script>
+    // The page has English built in; for Tamil or Hindi, keep it hidden until that language is filled in
+    try { if ((JSON.parse(localStorage.getItem('wb_lang')) || 'en') !== 'en') document.documentElement.classList.add('t-wait'); } catch (e) { /* storage blocked */ }
+  </script>
 </head>
 <body data-app="landing">
   <header class="topbar">
@@ -22,59 +24,62 @@
   <main class="landing">
     <div class="hero">
       <h1>Worker Buddy</h1>
-      <p data-t="tagline"></p>
+      <p data-t="tagline">Fair pay, safe work and the next job, one tap away.</p>
     </div>
 
-    <h2 data-t="chooseApp"></h2>
+    <h2 data-t="chooseApp">Choose your app</h2>
 
     <a class="app-card app-card-worker" href="worker/">
       <span class="app-card-icon">👷</span>
       <span>
-        <b data-t="appWorker"></b>
-        <small data-t="workerAppDesc"></small>
+        <b data-t="appWorker">Worker app</b>
+        <small data-t="workerAppDesc">Get jobs nearby or from WhatsApp, hear them read aloud, start with an OTP, and get a pay slip.</small>
       </span>
-      <span class="app-card-go" data-t="openApp"></span>
+      <span class="app-card-go" data-t="openApp">Open</span>
     </a>
 
     <a class="app-card app-card-employer" href="employer/">
       <span class="app-card-icon">🏠</span>
       <span>
-        <b data-t="appEmployer"></b>
-        <small data-t="employerAppDesc"></small>
+        <b data-t="appEmployer">Employer app</b>
+        <small data-t="employerAppDesc">Post a job at a fair rate, share it on WhatsApp, and nearby workers get it instantly.</small>
       </span>
-      <span class="app-card-go" data-t="openApp"></span>
+      <span class="app-card-go" data-t="openApp">Open</span>
     </a>
 
-    <h2 data-t="howItWorks"></h2>
+    <h2 data-t="howItWorks">How it works</h2>
     <ol class="flow">
-      <li data-t="flow1"></li>
-      <li data-t="flow2"></li>
-      <li data-t="flow3"></li>
-      <li data-t="flow4"></li>
-      <li data-t="flow5"></li>
-      <li data-t="flow6"></li>
+      <li data-t="flow1">Post job: type of work, place and hours</li>
+      <li data-t="flow2">Fair rate calculated and shown before anyone accepts</li>
+      <li data-t="flow3">Shared on WhatsApp, and nearby workers’ phones ring</li>
+      <li data-t="flow4">Worker accepts and starts with an OTP</li>
+      <li data-t="flow5">Work with heat alerts, water breaks and overtime</li>
+      <li data-t="flow6">Employer pays, worker confirms: pay slip and rating</li>
     </ol>
-    <a class="btn btn-light btn-block" href="wages/" data-t="wageMapLink"></a>
+    <a class="btn btn-light btn-block" href="wages/" data-t="wageMapLink">🗺️ Wage map: what people are paid near you</a>
 
-    <p class="tip">💡 <span data-t="demoSideBySide"></span></p>
+    <p class="tip">💡 <span data-t="demoSideBySide">Live demo: open the Worker app on one phone and the Employer app on another. A booking rings on the worker’s phone within a second.</span></p>
     <p class="muted small center">Team Tyrex · DEX26189 · Sathyabama Dexathon 2026 · <a href="privacy/">Privacy and terms</a></p>
   </main>
 
-  <script src="js/data.js"></script>
-  <script src="js/countries.js"></script>
-  <script src="js/lang-hi.js"></script>
+  <script defer src="js/data.js"></script>
+  <script defer src="js/countries.js"></script>
+  <script defer src="js/lang-hi.js"></script>
   <script>
-    // The landing page only needs the language picker
-    const LANGS = { en: 'English', ta: 'தமிழ்', hi: 'हिंदी' };
-    function render() {
-      document.documentElement.lang = App.lang;
-      document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = t(el.dataset.t); });
-    }
-    const sel = document.getElementById('langSelect');
-    sel.innerHTML = Object.entries(LANGS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
-    sel.value = App.lang;
-    sel.addEventListener('change', () => { App.lang = sel.value; Store.set('lang', App.lang); render(); });
-    render();
+    // The landing page only needs the language picker (runs once the deferred scripts above are in)
+    document.addEventListener('DOMContentLoaded', () => {
+      const LANGS = { en: 'English', ta: 'தமிழ்', hi: 'हिंदी' };
+      function render() {
+        document.documentElement.lang = App.lang;
+        document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = t(el.dataset.t); });
+        document.documentElement.classList.remove('t-wait');
+      }
+      const sel = document.getElementById('langSelect');
+      sel.innerHTML = Object.entries(LANGS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+      sel.value = App.lang;
+      sel.addEventListener('change', () => { App.lang = sel.value; Store.set('lang', App.lang); render(); });
+      render();
+    });
   </script>
 </body>
 </html>
