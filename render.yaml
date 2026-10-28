@@ -1,0 +1,34 @@
+# render.yaml — Worker Buddy on Render, as a static site (same files and headers as vercel.json).
+# A static site on Render never sleeps; only web services on the free plan do.
+# Set up once: Render dashboard → New → Blueprint → pick this repo. After that every push to main deploys.
+# Keep the headers here and in vercel.json the same while both are in use.
+services:
+  - type: web
+    runtime: static
+    name: worker-buddy
+    buildCommand: ""          # nothing to build: the repo is the site
+    staticPublishPath: .
+    previews:
+      generation: automatic   # a preview site for every pull request
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://*.tile.openstreetmap.org; connect-src 'self' https://ndvnvalwbtqgutpfsqfa.supabase.co wss://ndvnvalwbtqgutpfsqfa.supabase.co https://*.tile.openstreetmap.org https://nominatim.openstreetmap.org https://overpass-api.de https://overpass.private.coffee https://router.project-osrm.org https://api.open-meteo.com; media-src 'self' blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: "camera=(self), microphone=(self), geolocation=(self), payment=(), usb=(), interest-cohort=()"
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=63072000; includeSubDomains
+      - path: /vendor/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
