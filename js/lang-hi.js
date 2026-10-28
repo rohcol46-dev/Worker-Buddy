@@ -27,6 +27,8 @@ T.hi = {
   tagline: 'सही मज़दूरी, सुरक्षित काम और अगला काम, एक टैप पर।',
   introSkip: 'छोड़ने के लिए टैप करें',
   introSlip: 'पे स्लिप',
+  momentAccepted: 'काम आपका हुआ', momentStarted: 'काम शुरू हुआ', momentDone: 'काम पूरा। अपनी मज़दूरी माँगें।',
+  momentPaid: 'मज़दूरी मिली', momentWorkerComing: 'मज़दूर आ रहा है', momentSlipConfirmed: 'पे स्लिप पक्की हुई',
   introWork: 'किया गया काम', introRate: 'दर', introFair: 'सही दर ✓', introTotal: 'कुल', introPaid: 'भुगतान हुआ',
   needWork: 'मुझे काम चाहिए',
   needWorker: 'मुझे मज़दूर चाहिए',

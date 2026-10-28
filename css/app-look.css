@@ -119,3 +119,56 @@
 @media (prefers-reduced-motion: reduce) {
   .intro { display: none; }
 }
+
+/* ---------- Pay slips in popups: paper with a torn edge; they print from the top when opened,
+   and "confirmed" is a stamp ---------- */
+.slip {
+  background: var(--paper); border: 1px solid var(--line); border-bottom: 0; border-radius: 14px 14px 0 0;
+  padding: 14px 14px calc(14px + var(--tear));
+  animation: print-slip .55s steps(11) both;
+}
+@keyframes print-slip { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+.slip-ok {
+  display: table; margin: 4px auto 12px; padding: 4px 12px; border: 3px double var(--stamp); border-radius: 10px;
+  color: var(--stamp); transform: rotate(-2deg); animation: stamp-small .4s cubic-bezier(.3, 1.6, .5, 1) .45s both;
+}
+@keyframes stamp-small { 0% { transform: rotate(-2deg) scale(2); opacity: 0; } 100% { transform: rotate(-2deg) scale(1); opacity: 1; } }
+@media print { .slip { animation: none; border: 0; -webkit-mask: none; mask: none; } .slip-ok { animation: none; } }
+
+/* ---------- Moments (js/moments.js): a card pops over the screen for 1.5 s, never blocking a tap ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
+.moment {
+  position: fixed; inset: 0; z-index: 3000; display: grid; place-items: center; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(14, 26, 54, .28), transparent); transition: opacity .35s ease;
+}
+.moment.out { opacity: 0; }
+.moment-card {
+  position: relative; display: grid; justify-items: center; gap: 10px; min-width: 200px; padding: 22px 24px 18px;
+  background: var(--paper); border-radius: 22px; box-shadow: var(--shadow-pop);
+  animation: moment-in .45s cubic-bezier(.3, 1.5, .5, 1) both;
+}
+@keyframes moment-in { from { transform: scale(.6) rotate(-4deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.moment-card p { margin: 0; font-weight: 800; color: var(--navy); font-size: 1.1rem; text-align: center; max-width: 16em; }
+.moment-icon { position: relative; width: 76px; height: 76px; display: grid; place-items: center; }
+.moment-icon svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.moment-icon circle {
+  fill: var(--orange-soft); stroke: var(--orange-2); stroke-width: 3; stroke-linecap: round;
+  stroke-dasharray: 126; stroke-dashoffset: 126; animation: ring-draw .6s ease-out .15s forwards;
+}
+.moment-done .moment-icon circle { fill: var(--green-soft); stroke: var(--green); }
+@keyframes ring-draw { to { stroke-dashoffset: 0; } }
+.moment-icon em { font-style: normal; font-size: 2.1rem; animation: hop .5s var(--ease-out, ease-out) .35s both; }
+.moment-accepted .moment-icon em { animation: shake-hands .6s ease-in-out .3s 2 both; }
+@keyframes shake-hands { 25% { transform: translateY(-3px) rotate(-6deg); } 75% { transform: translateY(3px) rotate(6deg); } }
+.moment-paid .stamp-paid { font-size: 1.5rem; padding: 8px 18px; animation-delay: .1s; }
+.moment-amount { font-size: 2rem; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.coin {
+  position: absolute; left: 50%; top: 42%; width: 14px; height: 14px; margin: -7px; border-radius: 50%;
+  background: #F2B33D; box-shadow: inset 0 0 0 2px #D9932A; opacity: 0;
+  animation: coin-jump .8s cubic-bezier(.2, .7, .3, 1) .25s forwards;
+}
+@keyframes coin-jump {
+  0% { opacity: 1; transform: rotate(var(--a)) translateY(0) scale(.6); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(1); }
+}
