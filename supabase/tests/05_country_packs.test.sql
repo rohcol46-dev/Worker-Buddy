@@ -140,7 +140,9 @@ set role anon;
 do $$ begin
   assert (select currency from public.countries where code = 'IN') = 'INR', 'anon reads countries';
 end $$;
-update public.countries set currency = 'USD' where code = 'IN';
+-- 033: signed-out visitors have no write rights at all, so this is refused outright
+select pg_temp.expect_error($$update public.countries set currency = 'USD' where code = 'IN'$$,
+  'permission denied for table countries');
 reset role;
 do $$ begin
   assert (select currency from public.countries where code = 'IN') = 'INR', 'anon cannot change countries';

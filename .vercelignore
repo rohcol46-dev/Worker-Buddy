@@ -1,0 +1,7 @@
+# Files in the repo that the website doesn't need to serve (they stay public on GitHub)
+.github/
+supabase/
+tests/
+docs/
+render.yaml
+README.md

@@ -76,4 +76,48 @@ begin
   end if;
 end $$;
 
+-- 7. Views skip row-level security, so nobody but the database itself may write through one (033)
+do $$
+declare bad text;
+begin
+  select string_agg(c.relname || ' (' || r.role || ' ' || pr.p || ')', ', ') into bad
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+         cross join unnest(array['anon', 'authenticated']) r(role)
+         cross join unnest(array['INSERT', 'UPDATE', 'DELETE']) pr(p)
+   where n.nspname = 'public' and c.relkind in ('v', 'm')
+     and has_table_privilege(r.role, c.oid, pr.p);
+  if bad is not null then raise exception 'Someone can write through a view: %', bad; end if;
+end $$;
+
+-- 8. Signed-out visitors have no write rights on any table (033)
+do $$
+declare bad text;
+begin
+  select string_agg(c.relname || ' ' || pr.p, ', ') into bad
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+         cross join unnest(array['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE']) pr(p)
+   where n.nspname = 'public' and c.relkind = 'r'
+     and has_table_privilege('anon', c.oid, pr.p);
+  if bad is not null then raise exception 'anon has write rights on: %', bad; end if;
+end $$;
+
+-- 9. Signed-out visitors can still read the public profiles, and can't change them (033)
+do $$
+begin
+  set local role anon;
+  perform count(*) from public.workers_public;
+  perform count(*) from public.employers_public;
+  begin
+    update public.workers_public set name = 'x';
+    raise exception 'anon could update workers_public';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    delete from public.employers_public;
+    raise exception 'anon could delete through employers_public';
+  exception when insufficient_privilege then null;
+  end;
+  reset role;
+end $$;
+
 select 'security rules: ok' as result;
