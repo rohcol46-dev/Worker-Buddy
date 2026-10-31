@@ -1,4 +1,4 @@
-// intro.js — Worker Buddy's opening, once per visit: a pay slip prints line by line, a green PAID
+// intro.js — Worker Buddy's opening, the first time on a phone: a pay slip prints line by line, a green PAID
 // stamp thumps onto it, then the slip folds away into the logo with the tagline. About 3 seconds;
 // a tap, any key or "Tap to skip" ends it, and it never plays when the phone asks for less motion.
 // Also counts money up from zero when a big number first shows (.stats b). Look: css/app-look.css.
@@ -6,8 +6,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!calm) countUpStats();
 
+  // Only the very first time on this phone: a worker opens the app many times a day to check for
+  // jobs, and 3 seconds each time adds up. (Before 2026-10-31 it played once per visit.)
   try {
-    if (sessionStorage.getItem('wb_intro')) return;
+    if (localStorage.getItem('wb_intro_seen') || sessionStorage.getItem('wb_intro')) return;
+    localStorage.setItem('wb_intro_seen', '1');
     sessionStorage.setItem('wb_intro', '1');
   } catch (e) { return; } // storage blocked: don't risk playing it on every page
   if (calm) return;

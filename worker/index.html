@@ -33,17 +33,21 @@
     <main>
       <div class="hero"><h1 data-t="onboardWorkerTitle"></h1><p data-t="onboardHint"></p></div>
       <form id="onboardForm" class="card form" autocomplete="on">
-        <label><span data-t="yourName"></span><input name="name" required maxlength="60" data-t-ph="workerNamePh" autocomplete="name"></label>
+        <label><span data-t="workerName"></span><input name="name" required maxlength="60" data-t-ph="workerNamePh" autocomplete="name"></label>
         <label><span data-t="phone"></span><input name="phone" type="tel" inputmode="tel" data-phone maxlength="20" required placeholder="9876543210" autocomplete="tel-national"></label>
         <label><span data-t="birthYear"></span><input name="birth" type="number" inputmode="numeric" min="1940" max="2100" required placeholder="1995"></label>
         <label><span data-t="mainSkill"></span><select name="skill" id="skillSelect"></select></label>
-        <label><span data-t="experience"></span><input name="exp" type="number" inputmode="numeric" min="0" max="60" value="0"></label>
-        <label><span data-t="itiCert"></span><input name="iti" maxlength="30" autocomplete="off"></label>
-        <label><span data-t="upiIdLabel"></span><input name="upi" maxlength="80" autocomplete="off" inputmode="email" placeholder="name@okbank" pattern="[A-Za-z0-9._\-]{2,64}@[A-Za-z]{2,64}"></label>
-        <fieldset><legend data-t="myTools"></legend><div id="toolsChecks" class="chips wrap"></div></fieldset>
-        <label><span data-t="homeState"></span><input name="state" maxlength="40" autocomplete="off"></label>
-        <label><span data-t="cityLabel"></span><input name="city" maxlength="40" autocomplete="off"></label>
-        <label class="check"><input type="checkbox" name="mestri"> <span data-t="isMestri"></span></label>
+        <!-- Only name, number, birth year and skill are needed to start; the rest can wait -->
+        <details class="more-fields" id="moreFields">
+          <summary data-t="moreAboutMe"></summary>
+          <label><span data-t="experience"></span><input name="exp" type="number" inputmode="numeric" min="0" max="60" value="0"></label>
+          <label><span data-t="itiCert"></span><input name="iti" maxlength="30" autocomplete="off"></label>
+          <label><span data-t="upiIdLabel"></span><input name="upi" maxlength="80" autocomplete="off" inputmode="email" placeholder="name@okbank" pattern="[A-Za-z0-9._\-]{2,64}@[A-Za-z]{2,64}"></label>
+          <fieldset><legend data-t="myTools"></legend><div id="toolsChecks" class="chips wrap"></div></fieldset>
+          <label><span data-t="homeState"></span><input name="state" maxlength="40" autocomplete="off"></label>
+          <label><span data-t="cityLabel"></span><input name="city" maxlength="40" autocomplete="off"></label>
+          <label class="check"><input type="checkbox" name="mestri"> <span data-t="isMestri"></span></label>
+        </details>
         <button class="btn btn-primary btn-block btn-big" type="submit" data-t="continueBtn"></button>
       </form>
       <div class="card account-box"></div>
@@ -62,7 +66,7 @@
           <b id="helloName"></b>
           <div class="muted small" id="meLine"></div>
         </div>
-        <button class="link-btn small" onclick="editProfile()">✏️</button>
+        <button class="link-btn small edit-me" onclick="editProfile()" data-t-aria="editProfileAria">✏️</button>
       </div>
 
       <div id="dutyBlock">

@@ -146,7 +146,8 @@ function renderAccountButton() {
   const g = accGoogle(u);
   const who = u && !u.is_anonymous
     ? ((g && g.identity_data && g.identity_data.email) || u.email || (u.phone ? '+' + u.phone : '')).split('@')[0] : '';
-  btn.textContent = who ? `✅ ${who.slice(0, 14)}` : `👤 ${t('accSignInShort')}`;
+  const label = who ? who.slice(0, 14) : t('accSignInShort');
+  btn.innerHTML = `<span aria-hidden="true">${who ? '✅' : '👤'}</span> <span class="acc-label">${esc(label)}</span>`;
 }
 
 function openAccount() {

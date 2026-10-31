@@ -33,13 +33,24 @@ function ensureConsent() {
     m.setAttribute('aria-modal', 'true');
     m.setAttribute('aria-labelledby', 'consentTitle');
     const draw = () => {
+      const langs = typeof LANGS === 'object' ? LANGS : { en: 'English', ta: 'தமிழ்', hi: 'हिंदी' };
       m.innerHTML = `<div class="modal-box consent-box">
+        <div class="segmented consent-lang" role="group" aria-label="Language / மொழி / भाषा">${Object.entries(langs).map(([k, v]) =>
+          `<button type="button" data-lang="${k}" lang="${k}" class="${k === App.lang ? 'active' : ''}" aria-pressed="${k === App.lang}">${v}</button>`).join('')}</div>
         <h3 id="consentTitle">🔐 ${t('consentTitle')} ${speakButton(t('consentSpeech'))}</h3>
         <ul class="consent-list">${['consent1', 'consent2', 'consent3', 'consent4', 'consent5'].map((k) => `<li>${t(k)}</li>`).join('')}</ul>
         <p class="small"><a href="../privacy/" target="_blank" rel="noopener">${t('privacyRead')}</a></p>
         <button type="button" class="btn btn-accept btn-block btn-big" id="consentYes">${t('consentAgree')}</button>
         <p class="muted small">${t('consentNo')}</p>
       </div>`;
+      m.querySelectorAll('.consent-lang button').forEach((b) => b.addEventListener('click', () => {
+        if (typeof setLang === 'function') setLang(b.dataset.lang);
+        else { App.lang = b.dataset.lang; Store.set('lang', App.lang); if (App.onLang) App.onLang(); }
+        const sel = document.getElementById('langSelect');
+        if (sel) sel.value = App.lang;
+        const again = m.querySelector(`.consent-lang [data-lang="${App.lang}"]`);
+        if (again) again.focus(); // the popup redraws in the new language: keep the place
+      }));
       m.querySelector('#consentYes').addEventListener('click', () => {
         Store.set('consent', CONSENT_VERSION);
         Store.set('consent_lang', App.lang);

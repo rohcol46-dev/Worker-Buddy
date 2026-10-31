@@ -217,10 +217,13 @@ function tf(key, ...args) {
 let toastTimer = null;
 function showToast(message) {
   const el = document.getElementById('toast');
+  el.setAttribute('role', 'status'); // screen readers read it out
   el.textContent = message;
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+  // Long messages stay up longer: about 1 second for every 12 letters, between 3 and 8 seconds
+  const ms = Math.min(8000, Math.max(3000, String(message).length * 80));
+  toastTimer = setTimeout(() => el.classList.remove('show'), ms);
 }
 
 function closeModal(id) {
@@ -231,6 +234,7 @@ function applyLang() {
   document.documentElement.lang = App.lang;
   document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = t(el.dataset.t); });
   document.querySelectorAll('[data-t-ph]').forEach((el) => { el.placeholder = t(el.dataset.tPh); });
+  document.querySelectorAll('[data-t-aria]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.tAria)); });
   const sel = document.getElementById('langSelect');
   if (sel) sel.value = App.lang;
   if (typeof renderAccount === 'function' && typeof Acc !== 'undefined' && Acc.haveProfile) renderAccount();
@@ -238,7 +242,10 @@ function applyLang() {
 
 function show(id) {
   document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('active', s.id === id));
-  document.querySelectorAll('.bottom-nav button').forEach((b) => b.classList.toggle('active', b.dataset.go === id));
+  document.querySelectorAll('.bottom-nav button').forEach((b) => {
+    b.classList.toggle('active', b.dataset.go === id);
+    if (b.dataset.go === id) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
   if (id === 'safety') initMap();
   if (App.onShow) App.onShow(id);
 }

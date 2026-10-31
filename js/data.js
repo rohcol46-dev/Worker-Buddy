@@ -173,8 +173,22 @@ const SCHEMES = [
 ];
 
 // ---------- Shared app state ----------
+// First visit: start in the phone's own language when it is Tamil or Hindi, so a worker whose
+// phone speaks Tamil never has to find the picker in an English screen. A choice made later wins.
+function phoneLang() {
+  try {
+    const list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+    for (const l of list) {
+      const code = String(l).toLowerCase().split('-')[0];
+      if (code === 'ta' || code === 'hi') return code;
+      if (code === 'en') return 'en';
+    }
+  } catch (e) { /* no language info */ }
+  return 'en';
+}
+
 const App = {
-  lang: Store.get('lang', 'en'),
+  lang: Store.get('lang', null) || phoneLang(),
   here: { ...WORK_SITE },   // worker's location (Guindy until "Use my location")
   temp: null,               // "feels like" temperature
   isHot: false,             // adds heat pay and shows the warning
@@ -255,6 +269,9 @@ const T = {
 
     postTitle: 'Post a job',
     yourName: 'Your name or shop',
+    workerName: 'Your name',
+    editProfileAria: 'Edit my profile',
+    moreAboutMe: 'More about you (optional): experience, tools, UPI',
     yourNamePh: 'e.g. Kumar Stores',
     workType: 'Work type',
     area: 'Area', areaPh: 'Street, area or landmark',
@@ -401,6 +418,9 @@ const T = {
 
     postTitle: 'வேலை பதிவு செய்யுங்கள்',
     yourName: 'உங்கள் பெயர் அல்லது கடை',
+    workerName: 'உங்கள் பெயர்',
+    editProfileAria: 'என் விவரங்களைத் திருத்து',
+    moreAboutMe: 'உங்களைப் பற்றி மேலும் (விருப்பம்): அனுபவம், கருவிகள், UPI',
     yourNamePh: 'எ.கா. குமார் ஸ்டோர்ஸ்',
     workType: 'வேலை வகை',
     area: 'இடம்', areaPh: 'தெரு, பகுதி அல்லது அடையாளம்',
