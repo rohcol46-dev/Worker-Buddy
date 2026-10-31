@@ -48,6 +48,7 @@ function editProfile() {
   f.city.value = W.me ? W.me.city || '' : '';
   f.mestri.checked = !!(W.me && W.me.is_mestri);
   renderToolChecks(W.me ? W.me.tools : []);
+  document.getElementById('moreFields').open = !!W.me; // editing: show everything already saved
   enterOnboarding(true);
 }
 
@@ -939,7 +940,13 @@ async function init() {
   await ensureConsent();
   registerOffline();
   fillSelect(document.getElementById('skillSelect'), 'coolie');
-  document.getElementById('onboardForm').addEventListener('submit', saveProfile);
+  const onboardForm = document.getElementById('onboardForm');
+  onboardForm.addEventListener('submit', saveProfile);
+  // A wrong value in the folded "more about you" part: unfold it so the browser can point at it
+  onboardForm.addEventListener('invalid', (e) => {
+    const more = e.target.closest('details');
+    if (more) more.open = true;
+  }, true);
   document.querySelectorAll('.bottom-nav button').forEach((b) => b.addEventListener('click', () => show(b.dataset.go)));
   document.querySelectorAll('.modal:not(.request-modal)').forEach((m) => m.addEventListener('click', (e) => {
     if (e.target === m) m.classList.remove('open');

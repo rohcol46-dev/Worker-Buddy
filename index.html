@@ -13,7 +13,13 @@
   <link rel="stylesheet" href="css/app-look.css">
   <script>
     // The page has English built in; for Tamil or Hindi, keep it hidden until that language is filled in
-    try { if ((JSON.parse(localStorage.getItem('wb_lang')) || 'en') !== 'en') document.documentElement.classList.add('t-wait'); } catch (e) { /* storage blocked */ }
+    // (no saved choice yet: the phone's language decides, the same way as phoneLang() in js/data.js)
+    try {
+      var wbLang = JSON.parse(localStorage.getItem('wb_lang'));
+      var ls = navigator.languages || [navigator.language || ''];
+      for (var i = 0; !wbLang && i < ls.length; i++) { var c = String(ls[i]).toLowerCase().split('-')[0]; if (c === 'ta' || c === 'hi' || c === 'en') wbLang = c; }
+      if (wbLang === 'ta' || wbLang === 'hi') document.documentElement.classList.add('t-wait');
+    } catch (e) { /* storage blocked */ }
   </script>
   <script defer src="/_vercel/insights/script.js"></script>
 </head>

@@ -443,3 +443,45 @@ body.live:not(:has(.screen.active)) .boot { display: block; }
 }
 .offline-wait { background: #FFF6DE; border: 1px solid #F5E2AE; border-radius: 14px; padding: 10px 12px; font-weight: 700; margin: 0 0 12px; }
 .otp-new { display: block; margin: 6px auto 0; color: #FFD3B8; }
+
+/* ---------- Review fixes (2026-10-31) ---------- */
+/* A field the phone scrolls to (typing, or "please fill this in") stops below the sticky top bar */
+html { scroll-padding-top: 96px; }
+
+/* Toast: as wide as its words up to the screen edge, so a long message reads as lines, not a blob */
+.toast {
+  width: max-content; max-width: min(440px, calc(100vw - 32px));
+  border-radius: 18px; text-align: center; line-height: 1.4;
+}
+
+/* Small phones (360px): the account button shows only 👤, so "Worker Buddy" fits on one line.
+   The words stay for screen readers. */
+@media (max-width: 400px) {
+  .acc-btn .acc-label {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .acc-btn { min-width: 44px; padding-left: 10px; padding-right: 10px; }
+}
+.acc-btn, .lang-select { min-height: 44px; }
+
+/* Sign-up: optional details folded under one line */
+.more-fields { margin: 4px 0 14px; border-top: 1px solid var(--line); }
+.more-fields > summary {
+  cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px;
+  min-height: 48px; font-weight: 700; color: var(--orange);
+}
+.more-fields > summary::-webkit-details-marker { display: none; }
+.more-fields > summary::before {
+  content: "+"; flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--orange-soft); color: var(--orange); font-weight: 800; transition: transform .15s ease;
+}
+.more-fields[open] > summary::before { transform: rotate(45deg); }
+.more-fields[open] > summary { margin-bottom: 6px; }
+
+/* Small text buttons the thumb must still hit: 44px tall, no change to how they look */
+.edit-me, .rate-link { min-height: 44px; min-width: 44px; }
+.edit-me { font-size: 1.15rem; }
+
+/* Language choice on the privacy screen, before anything else */
+.consent-lang { margin: 0 0 14px; }
+.consent-lang button { min-height: 44px; font-size: .95rem; }

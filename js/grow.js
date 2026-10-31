@@ -185,15 +185,18 @@ async function addMember(event) {
 
 async function removeMember(id) {
   if (!confirm(t('removeMemberConfirm'))) return;
-  await db.from('crew_members').delete().eq('id', id);
+  const { error } = await db.from('crew_members').delete().eq('id', id);
+  if (error) showToast(t('saveError'));
   renderCrewBook();
 }
 
 async function markPresent(id, present) {
   if (!navigator.onLine) return showToast(t('offlineBanner'));
   const day = todayIso();
-  if (present) await db.from('crew_attendance').upsert({ member_id: id, day, present: true });
-  else await db.from('crew_attendance').delete().eq('member_id', id).eq('day', day);
+  const { error } = present
+    ? await db.from('crew_attendance').upsert({ member_id: id, day, present: true })
+    : await db.from('crew_attendance').delete().eq('member_id', id).eq('day', day);
+  if (error) showToast(t('saveError')); // the tick goes back, so the book never shows a day that wasn't saved
   renderCrewBook();
 }
 
@@ -202,7 +205,10 @@ async function payCrewWeek(id) {
   const m = Crew.members.find((x) => x.id === id);
   const wk = crewWeek(m);
   if (!wk.owed) return;
-  await db.from('crew_attendance').update({ paid: true }).eq('member_id', id).in('day', wk.unpaidDays);
+  if (!navigator.onLine) return showToast(t('offlineBanner'));
+  // Only show a "paid" slip once the days are really marked paid; otherwise they'd be paid twice
+  const { error } = await db.from('crew_attendance').update({ paid: true }).eq('member_id', id).in('day', wk.unpaidDays);
+  if (error) return showToast(t('saveError'));
   const lines = [
     `🧾 Worker Buddy · ${t('crewSlip')}`,
     `${t('worker')}: ${m.name}`,
@@ -234,11 +240,13 @@ async function loadFavorites() {
 }
 async function toggleFavorite(workerId) {
   if (Fav.ids.includes(workerId)) {
-    await db.from('favorites').delete().eq('employer_id', E.me.id).eq('worker_id', workerId);
+    const { error } = await db.from('favorites').delete().eq('employer_id', E.me.id).eq('worker_id', workerId);
+    if (error) return showToast(t('saveError'));
     Fav.ids = Fav.ids.filter((x) => x !== workerId);
     showToast(t('favRemoved'));
   } else {
-    await db.from('favorites').insert({ employer_id: E.me.id, worker_id: workerId });
+    const { error } = await db.from('favorites').insert({ employer_id: E.me.id, worker_id: workerId });
+    if (error) return showToast(t('saveError'));
     Fav.ids.push(workerId);
     showToast(t('favAdded'));
   }
