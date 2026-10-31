@@ -485,3 +485,24 @@ html { scroll-padding-top: 96px; }
 /* Language choice on the privacy screen, before anything else */
 .consent-lang { margin: 0 0 14px; }
 .consent-lang button { min-height: 44px; font-size: .95rem; }
+
+/* ---------- Second pass (2026-10-31): touch, long names, big text ---------- */
+/* Hover lifts only with a mouse. On a phone, :hover sticks after a tap and leaves the card raised. */
+@media (hover: none), (pointer: coarse) {
+  .app-card:hover, .star:hover { transform: none; }
+  .job-card:hover, .app-card:hover { box-shadow: var(--shadow-sm); }
+}
+
+/* "Hi <name>": a long name (four Tamil words) used to take four big lines and push "Go online"
+   off the screen. Now at most two lines, a little smaller, breaking only where it must. */
+.me-row > div { min-width: 0; }
+#helloName {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+  font-size: clamp(1.25rem, 6vw, 1.6rem); line-height: 1.25; overflow-wrap: anywhere;
+}
+html:lang(ta) #helloName { font-size: clamp(1.15rem, 5.4vw, 1.45rem); line-height: 1.4; }
+.edit-me { flex: none; }
+
+/* Big text (phone font size up): tab labels shorten instead of pushing the bar off the screen */
+.bottom-nav button { min-width: 0; flex: 1 1 0; }
+.bottom-nav small { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -116,10 +116,10 @@ h3 { margin: 22px 0 8px; font-size: 1.05rem; }
 }
 .switch span {
   position: absolute; top: 4px; left: 4px; width: 28px; height: 28px;
-  border-radius: 50%; background: #fff; transition: left .15s;
+  border-radius: 50%; background: #fff; transition: transform .15s cubic-bezier(.2, .8, .2, 1);
 }
 .switch[aria-pressed="true"] { background: var(--green); }
-.switch[aria-pressed="true"] span { left: 32px; }
+.switch[aria-pressed="true"] span { transform: translateX(28px); }
 
 /* ---------- Filter chips ---------- */
 .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; }
