@@ -246,6 +246,8 @@ function show(id) {
     b.classList.toggle('active', b.dataset.go === id);
     if (b.dataset.go === id) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
+  // The cards "deal" in on the first screen only; later tab switches just show the page
+  if (!document.body.classList.contains('settled')) setTimeout(() => document.body.classList.add('settled'), 700);
   if (id === 'safety') initMap();
   if (App.onShow) App.onShow(id);
 }

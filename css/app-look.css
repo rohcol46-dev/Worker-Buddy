@@ -64,19 +64,22 @@
   background: var(--orange-2); transform: scaleX(0); transition: transform .25s var(--ease-out, ease-out);
 }
 .bottom-nav button.active::after { transform: scaleX(1); }
-.bottom-nav button.active span { animation: hop .4s var(--ease-out, ease-out); }
-@keyframes hop { 40% { transform: translateY(-5px); } 100% { transform: none; } }
+.bottom-nav button.active span { animation: hop .22s var(--ease-out, ease-out); }
+@keyframes hop { 40% { transform: translateY(-3px); } 100% { transform: none; } }
 
 /* ---------- Screens: a new screen slides in from the side like a page in a slip book,
-   and its cards follow one after another ---------- */
-.screen.active { animation: page-in .3s var(--ease-out, ease-out); }
-@keyframes page-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+   and its cards follow one after another (the cards only the first time: see body.settled) ---------- */
+.screen.active { animation: page-in .18s var(--ease-out, ease-out); }
+@keyframes page-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
 .landing > *, .sheet > *, .screen.active > .card { animation: deal .4s var(--ease-out, ease-out) both; }
 .landing > :nth-child(2), .sheet > :nth-child(2) { animation-delay: .04s; }
 .landing > :nth-child(3), .sheet > :nth-child(3) { animation-delay: .08s; }
 .landing > :nth-child(4), .sheet > :nth-child(4) { animation-delay: .12s; }
 .landing > :nth-child(n+5), .sheet > :nth-child(n+5) { animation-delay: .16s; }
 @keyframes deal { from { opacity: 0; transform: translateY(10px) rotate(-.6deg); } to { opacity: 1; transform: none; } }
+/* After the first screen, switching tabs doesn't deal the cards again: a worker flips tabs all day,
+   and half a second of cards arriving each time is waiting, not delight (js/live.js show()) */
+body.settled .sheet > *, body.settled .screen.active > .card { animation: none; }
 
 /* App cards on the landing page tilt a little toward the thumb, like picking up a card */
 .app-card { transition: transform .2s var(--ease-out, ease-out), box-shadow .2s ease; }
