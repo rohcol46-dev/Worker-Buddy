@@ -18,8 +18,11 @@ async function ensureSignedIn() {
     }
     if (!data.session) {
       if (!navigator.onLine) return false;
-      const { error } = await db.auth.signInAnonymously();
-      if (error) return false;
+      const { error } = await db.auth.signInAnonymously({ options: { captchaToken: await captchaToken() } });
+      if (error) {
+        if (/captcha/i.test(error.message || '')) showToast(t('captchaFail'));
+        return false;
+      }
     }
     // Profiles made before accounts existed: this phone claims them once, using its old id
     const key = 'claimed_' + deviceId();
@@ -32,6 +35,48 @@ async function ensureSignedIn() {
   } catch (e) {
     return false;
   }
+}
+
+// Bot check before a new sign-in (Cloudflare Turnstile), when TURNSTILE_SITE_KEY is set in config.js.
+// Supabase then refuses sign-ins without a fresh token, so fake accounts can't be made in bulk.
+// Most people never see it; a doubtful phone gets a small box at the bottom to tap.
+// Resolves to the token, or undefined (no key set, or the check could not load).
+const Captcha = { id: null, loading: null };
+function captchaToken() {
+  if (typeof TURNSTILE_SITE_KEY === 'undefined' || !TURNSTILE_SITE_KEY) return Promise.resolve(undefined);
+  return new Promise((resolve) => {
+    let box = document.getElementById('captchaBox');
+    const done = (token) => {
+      clearTimeout(timer);
+      if (box) box.hidden = true;
+      resolve(token);
+    };
+    const timer = setTimeout(() => done(undefined), 60000);
+    Captcha.loading = Captcha.loading || new Promise((ok, no) => {
+      const s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      s.onload = ok;
+      s.onerror = () => { Captcha.loading = null; s.remove(); no(new Error('load')); };
+      document.head.appendChild(s);
+    });
+    Captcha.loading.then(() => {
+      if (!box) {
+        box = document.createElement('div');
+        box.id = 'captchaBox';
+        box.className = 'captcha-box';
+        document.body.appendChild(box);
+      }
+      box.hidden = false;
+      if (Captcha.id !== null) window.turnstile.remove(Captcha.id);
+      Captcha.id = window.turnstile.render(box, {
+        sitekey: TURNSTILE_SITE_KEY,
+        appearance: 'interaction-only',
+        callback: (token) => done(token),
+        'error-callback': () => done(undefined),
+        'expired-callback': () => done(undefined)
+      });
+    }).catch(() => done(undefined));
+  });
 }
 
 // Each phone gets its own id: it picks which profile on this phone is "me" (shared phone mode)

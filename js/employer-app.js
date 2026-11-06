@@ -426,7 +426,9 @@ async function sendPost(post) {
   }
   const { data: made, error } = await db.from('bookings').insert(rows).select();
   E.postError = error || null;
-  return error || !made || !made.length ? null : made;
+  if (error || !made || !made.length) return null;
+  sendJobAlert(made);
+  return made;
 }
 
 // Jobs saved while offline: post them once the internet is back

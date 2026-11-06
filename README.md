@@ -4,8 +4,6 @@
 
 Two linked mobile web apps for India's offline daily-wage workers (coolies, helpers, plumbers, electricians, masons, painters) and the people who hire them.
 
-Team **Tyrex** · Team ID **DEX26189** · Sathyabama Dexathon 2026
-
 ## The job flow (same as the pitch deck, slide 3)
 
 | Step | In the app |
@@ -168,7 +166,7 @@ Steps done by hand in the dashboards are in `docs/LAUNCH-CHECKLIST.md`.
 python -m http.server 5500
 ```
 
-Open http://localhost:5500. For the live demo, open `/employer/` on one phone or window and `/worker/` on another.
+Open http://localhost:5500. To try a booking, open `/employer/` on one phone or window and `/worker/` on another.
 
 ## Host it on Render
 

@@ -66,7 +66,7 @@ async function accSendOtp(event) {
   if (!(await accProviders()).phone) return showToast(t('accNotOn'));
   const u = await accUser();
   Acc.linking = !!(u && u.is_anonymous && Acc.haveProfile());
-  const { error } = Acc.linking ? await db.auth.updateUser({ phone }) : await db.auth.signInWithOtp({ phone });
+  const { error } = Acc.linking ? await db.auth.updateUser({ phone }) : await db.auth.signInWithOtp({ phone, options: { captchaToken: await captchaToken() } });
   if (error) return showToast(accErr(error));
   Acc.phone = phone;
   Acc.step = 'otp';
@@ -86,6 +86,7 @@ async function accVerifyOtp(event) {
 
 async function accSignOut() {
   if (!confirm(t('accSignOutAsk'))) return;
+  if (typeof forgetPush === 'function') await forgetPush();
   await db.auth.signOut();
   ['w_me', 'e_me', 'device'].forEach((k) => Store.set(k, null));
   location.reload();
