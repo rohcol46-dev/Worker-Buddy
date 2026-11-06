@@ -998,6 +998,11 @@ async function init() {
   W.map = heroMap('heroMap');
   await loadActive();
   renderHome();
+  locateOnStart(() => {
+    if (W.map) W.map.setView([App.here.lat, App.here.lng], 14);
+    renderHome();
+    if (App.onMove) App.onMove();   // online: the database gets the new place, for nearby jobs
+  });
   renderBuddyTools();
   listen();
   flushQueue();

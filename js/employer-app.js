@@ -319,8 +319,8 @@ async function areaTyped() {
 }
 
 function useMyPlace() {
-  locate(async (ok) => {
-    if (!ok) return showToast(t('noLocation'));
+  locate(async (ok, why) => {
+    if (!ok) return why === 'blocked' || showToast(t('noLocation'));
     await pinMoved({ ...App.here });
   });
 }
@@ -1271,15 +1271,13 @@ async function startApp() {
   if (!navigator.onLine) return;
   await loadFavorites();
   await loadWorkers();
-  // If this phone already allows location, start from where the employer is (no permission prompt here)
-  if (navigator.permissions && !E.site) {
-    navigator.permissions.query({ name: 'geolocation' }).then((s) => {
-      if (s.state === 'granted') locate((ok) => {
-        if (!ok || E.site) return;
-        if (E.map) E.map.setView([App.here.lat, App.here.lng], 14);
-        loadWorkers();
-      });
-    }).catch(() => {});
+  // Start from where the employer is (asks once on a new phone or a newly installed app)
+  if (!E.site) {
+    locateOnStart(() => {
+      if (E.site) return;
+      if (E.map) E.map.setView([App.here.lat, App.here.lng], 14);
+      loadWorkers();
+    });
   }
   await loadOpenBooking();
   syncForm();
