@@ -132,6 +132,7 @@ function renderHome() {
     : t('offlineHint');
   document.getElementById('jobsDone').textContent = W.me.jobs_done;
   document.getElementById('dutyBlock').hidden = !!W.active;
+  renderPushCard(W.me.id);
 
   if (W.map) {
     if (!W.meMarker) W.meMarker = L.marker([App.here.lat, App.here.lng], { icon: pin('👷', 'pin-me') }).addTo(W.map);
@@ -170,6 +171,7 @@ function listenBookings() {
 
 function listen() {
   listenBookings();
+  refreshPush(W.me.id);
   if (W.listening) return;
   W.listening = true;
   listenMaterials((row) => {
@@ -200,6 +202,7 @@ function listen() {
     if (wasOnline && !W.me.online) showToast(t('wentOffline'));
     cacheState();
     renderHome();
+    checkOpenRequests();   // back from a job alert, or live updates paused while the screen was off
   });
   listenMessages((m) => {
     if (m.sender !== 'worker') {

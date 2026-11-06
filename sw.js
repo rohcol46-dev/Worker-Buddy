@@ -4,7 +4,7 @@
 // So: bump VERSION in every PR that changes an app file. Without a bump, phones get the change one
 // open later, file by file, which can briefly mix old and new files.
 // Map tiles seen before are kept too. Live data (Supabase, weather, places) always goes to the network.
-const VERSION = 'wb-v34';
+const VERSION = 'wb-v35';
 const APP_FILES = [
   './',
   './index.html',
@@ -22,6 +22,7 @@ const APP_FILES = [
   './js/live.js',
   './js/report.js',
   './js/account.js',
+  './js/push.js',
   './js/trust.js',
   './js/countries.js',
   './js/features.js',
@@ -116,4 +117,31 @@ self.addEventListener('fetch', (event) => {
       return fresh.catch(() => Response.error());
     })
   );
+});
+
+// Job alerts (supabase/functions/job-alert): show the alert, unless the app is open on the screen
+// (it rings by itself then). A tap opens the worker app, which picks up the open request.
+self.addEventListener('push', (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) { d = { body: event.data ? event.data.text() : '' }; }
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    if (list.some((c) => c.visibilityState === 'visible' && c.url.includes('/worker/'))) return;
+    return self.registration.showNotification(d.title || 'Worker Buddy', {
+      body: d.body || '',
+      tag: d.tag || 'job',
+      renotify: true,
+      vibrate: [300, 100, 300, 100, 300],
+      data: { url: d.url || '/worker/' }
+    });
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || '/worker/', self.location.origin).href;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    const open = list.find((c) => c.url.includes('/worker/'));
+    if (open) return open.focus();
+    return self.clients.openWindow(url);
+  }));
 });

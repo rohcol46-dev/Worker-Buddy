@@ -497,7 +497,13 @@ Object.assign(T.en, {
   placesSaved: 'Showing saved places (offline, or none found nearby).',
   nearbyBtn: '🚰 Water, shade and tea nearby',
   loadingPlaces: 'Finding real places near you from OpenStreetMap… (showing saved places for now)',
-  listenJob: '🔊 Listen'
+  listenJob: '🔊 Listen',
+  pushOnBtn: '🔔 Turn on job alerts',
+  pushHint: 'Get a ring for new jobs even when the app is closed, while you are online.',
+  pushOn: 'Job alerts are on. Stay online to get them.',
+  pushBlocked: 'Alerts are blocked for this app. Allow notifications for this site in your phone settings.',
+  pushFailed: 'Could not turn on alerts. Try again.',
+  captchaFail: 'Could not check this phone. Check the internet and try again.'
 });
 
 Object.assign(T.ta, {
@@ -552,5 +558,11 @@ Object.assign(T.ta, {
   placesSaved: 'சேமித்த இடங்கள் காட்டப்படுகின்றன (இணையம் இல்லை, அல்லது அருகில் இல்லை).',
   nearbyBtn: '🚰 அருகில் தண்ணீர், நிழல், டீ',
   loadingPlaces: 'OpenStreetMap-இலிருந்து அருகிலுள்ள இடங்களைத் தேடுகிறது… (இப்போது சேமித்த இடங்கள்)',
-  listenJob: '🔊 கேளுங்கள்'
+  listenJob: '🔊 கேளுங்கள்',
+  pushOnBtn: '🔔 வேலை அறிவிப்புகளை இயக்கு',
+  pushHint: 'ஆன்லைனில் இருக்கும்போது, ஆப் மூடியிருந்தாலும் புதிய வேலைக்கு ஒலி வரும்.',
+  pushOn: 'வேலை அறிவிப்புகள் இயங்குகின்றன. அவற்றைப் பெற ஆன்லைனில் இருங்கள்.',
+  pushBlocked: 'இந்த ஆப்பிற்கு அறிவிப்புகள் தடுக்கப்பட்டுள்ளன. போன் அமைப்புகளில் இந்தத் தளத்திற்கு அறிவிப்புகளை அனுமதிக்கவும்.',
+  pushFailed: 'அறிவிப்புகளை இயக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.',
+  captchaFail: 'இந்த போனைச் சரிபார்க்க முடியவில்லை. இணையத்தைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.'
 });

@@ -25,6 +25,9 @@ body.onboarding .bottom-nav { display: none; }
 }
 .duty-btn.is-online { background: var(--navy); box-shadow: none; }
 .duty-text { text-align: center; color: var(--muted); margin: 12px 0; }
+.push-card { margin: 0 0 12px; text-align: center; }
+.push-card p { margin: 6px 0 0; }
+.captcha-box { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 1000; }
 .pulse-dot {
   display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--green);
   margin-right: 8px; vertical-align: middle; animation: pulse 1.4s infinite;
