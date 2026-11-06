@@ -115,6 +115,7 @@ T.hi = {
   simulateHot: 'डेमो: गर्म दिन',
   useLocation: '📍 मेरी लोकेशन',
   noLocation: 'आपकी लोकेशन नहीं मिली।',
+  locationBlocked: 'Worker Buddy के लिए लोकेशन बंद है। चालू करने के लिए: फ़ोन Settings → Apps → Worker Buddy (या आपका ब्राउज़र) → Permissions → Location → Allow.',
   mapOffline: 'नक्शे के लिए इंटरनेट चाहिए। नीचे की सूची चलेगी।',
   youAreHere: 'आप यहाँ हैं',
   shade: 'छाया', water: 'पानी', tea: 'चाय / खाना', toilet: 'शौचालय',

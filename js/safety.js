@@ -132,8 +132,8 @@ function useMyLocation() {
     showToast(t('noLocation'));
     return;
   }
-  navigator.geolocation.getCurrentPosition((pos) => {
-    App.here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+  locate((ok, why) => {
+    if (!ok) return why === 'blocked' || showToast(t('noLocation'));
     if (map) {
       map.setView([App.here.lat, App.here.lng], 15);
       hereMarker.setLatLng([App.here.lat, App.here.lng]);
@@ -142,7 +142,7 @@ function useMyLocation() {
     loadPlaces();
     if (App.onMove) App.onMove(); // each app redraws distances
     loadHeat();
-  }, () => showToast(t('noLocation')), { timeout: 10000 });
+  });
 }
 
 // ---------- SOS ----------

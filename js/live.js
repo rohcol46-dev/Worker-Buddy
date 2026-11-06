@@ -381,12 +381,34 @@ function pin(html, cls) {
   return L.divIcon({ className: 'map-pin ' + (cls || ''), html, iconSize: [34, 34] });
 }
 
+// Where is this phone? A fix from the last 10 minutes is fine. An installed app starts with no
+// saved fix, and a first fix can take longer than in the browser, so a slow answer gets one more
+// try with GPS. If location is blocked for the app, say how to allow it; done(false, 'blocked').
 function locate(done) {
   if (!navigator.geolocation) return done && done(false);
-  navigator.geolocation.getCurrentPosition((pos) => {
+  const ok = (pos) => {
     App.here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     if (done) done(true);
-  }, () => done && done(false), { timeout: 8000, maximumAge: 60000 });
+  };
+  const fail = (err) => {
+    const blocked = !!err && err.code === 1;
+    if (blocked) showToast(t('locationBlocked'));
+    if (done) done(false, blocked ? 'blocked' : 'failed');
+  };
+  navigator.geolocation.getCurrentPosition(ok, (err) => {
+    if (err && err.code !== 1) {
+      navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 20000, maximumAge: 600000 });
+    } else fail(err);
+  }, { timeout: 15000, maximumAge: 600000 });
+}
+
+// On opening the app: find the phone's place by itself, unless location was refused before
+// (the browser then gives no prompt; tapping 📍 or Go online asks again).
+function locateOnStart(done) {
+  const go = () => locate((ok) => { if (ok && done) done(); });
+  if (!navigator.permissions || !navigator.permissions.query) return go();
+  navigator.permissions.query({ name: 'geolocation' })
+    .then((s) => { if (s.state !== 'denied') go(); }, go);
 }
 
 // ---------- Extra text for the live apps (English + Tamil) ----------
